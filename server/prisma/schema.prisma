@@ -1,9 +1,59 @@
-import "dotenv/config";
-
-export default {
-  schema: "prisma/schema.prisma",
-
-  datasource: {
-    url: process.env.DATABASE_URL
-  }
-};
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" }
+model User {
+ id String @id @default(cuid())
+ name String
+ email String @unique
+ passwordHash String
+ gameId String @unique
+ pinHash String?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ stats GameStats?
+ sentMessages Message[] @relation("SentMessages")
+ receivedMessages Message[] @relation("ReceivedMessages")
+ outgoingCalls CallLog[] @relation("Caller")
+ incomingCalls CallLog[] @relation("Receiver")
+}
+model GameStats {
+ id String @id @default(cuid())
+ userId String @unique
+ wins Int @default(0)
+ losses Int @default(0)
+ draws Int @default(0)
+ updatedAt DateTime @updatedAt
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+}
+model Message {
+ id String @id @default(cuid())
+ senderId String
+ receiverId String
+ content String @db.VarChar(4000)
+ readAt DateTime?
+ expiresAt DateTime?
+ createdAt DateTime @default(now())
+ sender User @relation("SentMessages",fields:[senderId],references:[id],onDelete:Cascade)
+ receiver User @relation("ReceivedMessages",fields:[receiverId],references:[id],onDelete:Cascade)
+ @@index([senderId,receiverId,createdAt])
+ @@index([receiverId,senderId,createdAt])
+ @@index([expiresAt])
+}
+model ChatPreference {
+ id String @id @default(cuid())
+ conversationKey String @unique
+ mode String @default("off")
+ updatedAt DateTime @updatedAt
+}
+model CallLog {
+ id String @id @default(cuid())
+ callerId String
+ receiverId String
+ type String
+ status String @default("initiated")
+ startedAt DateTime @default(now())
+ endedAt DateTime?
+ caller User @relation("Caller",fields:[callerId],references:[id],onDelete:Cascade)
+ receiver User @relation("Receiver",fields:[receiverId],references:[id],onDelete:Cascade)
+ @@index([callerId,startedAt])
+ @@index([receiverId,startedAt])
+}
