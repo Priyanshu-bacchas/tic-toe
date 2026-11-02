@@ -34,7 +34,7 @@ router.get('/requests', async (req, res, next) => {
       }),
       prisma.friendRequest.findMany({
         where: { senderId: req.user.id, status: 'PENDING' },
-        include: { receiver: { select: { id: true, name: true, gameId: true } } },
+        include: { receiver: { select: { id: true, name: true, gameId: true, profilePhoto: true } } },
         orderBy: { createdAt: 'desc' }
       })
     ]);
@@ -50,8 +50,8 @@ router.get('/friends', async (req, res, next) => {
     const rows = await prisma.friendRequest.findMany({
       where: { status: 'ACCEPTED', OR: [{ senderId: req.user.id }, { receiverId: req.user.id }] },
       include: {
-        sender: { select: { id: true, name: true, gameId: true } },
-        receiver: { select: { id: true, name: true, gameId: true } }
+        sender: { select: { id: true, name: true, gameId: true, profilePhoto: true } },
+        receiver: { select: { id: true, name: true, gameId: true, profilePhoto: true } }
       },
       orderBy: { updatedAt: 'desc' }
     });
