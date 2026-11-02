@@ -49,8 +49,8 @@ function Chat() {
     const uploadProfile = (e) => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
-        if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
-            alert("Choose an image smaller than 5 MB.");
+        if (!file.type.startsWith("image/") || file.size > 900 * 1024) {
+            alert("Choose an image smaller than 900 KB.");
             e.target.value = "";
             return;
         }
@@ -109,6 +109,7 @@ function Chat() {
                 apiRequest("/api/users/requests")
             ]);
             setFriends(friendData.friends || []);
+            setSelected(current => current ? ((friendData.friends || []).find(friend => friend.id === current.id) || null) : null);
             setRequests(requestData.incoming || []);
             setOutgoingRequests(requestData.outgoing || []);
         } catch (error) {
@@ -333,8 +334,8 @@ function Chat() {
         };
 
         files.forEach(file => {
-            if ((!file.type.startsWith("image/") && !file.type.startsWith("video/")) || file.size > 8 * 1024 * 1024) {
-                if (file.size > 8 * 1024 * 1024) alert(file.name + " is larger than 8 MB and was skipped.");
+            if ((!file.type.startsWith("image/") && !file.type.startsWith("video/")) || file.size > 6 * 1024 * 1024) {
+                if (file.size > 8 * 1024 * 1024) alert(file.name + " is larger than 6 MB and was skipped.");
                 finishOne();
                 return;
             }
