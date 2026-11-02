@@ -1446,3 +1446,42 @@ cursor:pointer;
 
 }
 
+
+
+/* Compact search result action button */
+.search-result {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.user-card {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  gap: 10px;
+}
+.user-card-info {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+.user-card-info h4,
+.user-card-info p {
+  margin: 0;
+}
+.user-card button {
+  flex: 0 0 64px;
+  width: 64px;
+  min-width: 64px;
+  max-width: 64px;
+  height: 38px;
+  padding: 0 8px;
+  font-size: 14px;
+  line-height: 1;
+}
+.search-message {
+  padding: 10px 4px;
+  color: #666;
+  font-size: 13px;
+}
