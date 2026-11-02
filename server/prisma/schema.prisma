@@ -11,6 +11,7 @@ model User {
   name            String
   email           String      @unique
   passwordHash    String
+  petAnswerHash   String?
   gameId          String      @unique
   pinHash         String?
   profilePhoto    String?     @db.Text
