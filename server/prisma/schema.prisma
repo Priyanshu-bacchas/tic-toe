@@ -13,6 +13,7 @@ model User {
   passwordHash    String
   gameId          String      @unique
   pinHash         String?
+  profilePhoto    String?     @db.Text
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   stats           GameStats?
@@ -22,6 +23,7 @@ model User {
   incomingCalls   CallLog[]   @relation("Receiver")
   sentFriendRequests FriendRequest[] @relation("FriendRequestSender")
   receivedFriendRequests FriendRequest[] @relation("FriendRequestReceiver")
+  statuses        Status[]
 }
 
 model GameStats {
@@ -86,4 +88,17 @@ model FriendRequest {
   @@unique([senderId, receiverId])
   @@index([receiverId, status])
   @@index([senderId, status])
+}
+
+
+model Status {
+  id        String   @id @default(cuid())
+  userId    String
+  mediaUrl  String   @db.Text
+  type      String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }
