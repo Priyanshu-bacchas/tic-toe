@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const prisma = require('../prisma');
 
-const safeUser = user => ({ id: user.id, userId: user.id, name: user.name, gameId: user.gameId });
+const safeUser = user => ({ id: user.id, userId: user.id, name: user.name, gameId: user.gameId, profilePhoto: user.profilePhoto || null });
 
 router.get('/search', async (req, res, next) => {
   try {
@@ -15,7 +15,7 @@ router.get('/search', async (req, res, next) => {
           { gameId: { contains: q, mode: 'insensitive' } }
         ]
       },
-      select: { id: true, name: true, gameId: true },
+      select: { id: true, name: true, gameId: true, profilePhoto: true },
       orderBy: { name: 'asc' },
       take: 20
     });
@@ -29,7 +29,7 @@ router.get('/requests', async (req, res, next) => {
     const [incoming, outgoing] = await Promise.all([
       prisma.friendRequest.findMany({
         where: { receiverId: req.user.id, status: 'PENDING' },
-        include: { sender: { select: { id: true, name: true, gameId: true } } },
+        include: { sender: { select: { id: true, name: true, gameId: true, profilePhoto: true } } },
         orderBy: { createdAt: 'desc' }
       }),
       prisma.friendRequest.findMany({
