@@ -25,9 +25,15 @@ function Chat() {
     // PROFILE PHOTO
     // =========================================================
 
-    const [profilePhoto, setProfilePhoto] = useState(() =>
-        localStorage.getItem(`profile_photo_${user.gameId}`) || null
-    );
+    const [profilePhoto, setProfilePhoto] = useState(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        apiRequest("/api/users/profile")
+            .then(data => { if (!cancelled) setProfilePhoto(data.profilePhoto || null); })
+            .catch(error => console.error("Profile photo load failed:", error.message));
+        return () => { cancelled = true; };
+    }, []);
 
     const uploadProfile = (e) => {
         const file = e.target.files && e.target.files[0];
@@ -40,8 +46,15 @@ function Chat() {
         const reader = new FileReader();
         reader.onload = () => {
             const dataUrl = String(reader.result || "");
-            setProfilePhoto(dataUrl);
-            localStorage.setItem(`profile_photo_${user.gameId}`, dataUrl);
+            if (dataUrl.length > 1200000) {
+                alert("Please choose a smaller profile photo (under 900 KB).");
+                return;
+            }
+            apiRequest("/api/users/profile", {
+                method: "PUT",
+                body: JSON.stringify({ profilePhoto: dataUrl })
+            }).then(() => setProfilePhoto(dataUrl))
+              .catch(error => alert(error.message));
         };
         reader.onerror = () => alert("Could not read this image.");
         reader.readAsDataURL(file);
@@ -51,11 +64,11 @@ function Chat() {
 
     const removeProfile = () => {
 
-        setProfilePhoto(null);
-
-        localStorage.removeItem(
-            `profile_photo_${user.gameId}`
-        );
+        apiRequest("/api/users/profile", {
+            method: "PUT",
+            body: JSON.stringify({ profilePhoto: null })
+        }).then(() => setProfilePhoto(null))
+          .catch(error => alert(error.message));
 
 
 
@@ -125,33 +138,41 @@ function Chat() {
     // MY STATUS
     // =========================================================
 
-    const [myStatus, setMyStatus] = useState(() => {
+    const [myStatus, setMyStatus] = useState([]);
+    const [friendStatusMap, setFriendStatusMap] = useState({});
 
-        try {
+    useEffect(() => {
+        let cancelled = false;
+        const loadMyStatus = async () => {
+            try {
+                const data = await apiRequest("/api/users/status");
+                if (!cancelled) setMyStatus(data.statuses || []);
+            } catch (error) { console.error("My status load failed:", error.message); }
+        };
+        loadMyStatus();
+        const timer = setInterval(loadMyStatus, 10000);
+        return () => { cancelled = true; clearInterval(timer); };
+    }, []);
 
-            const newKey =
-                `status_${user.gameId}`;
-
-            const newData =
-                localStorage.getItem(newKey);
-
-
-            if (newData) {
-
-                return JSON.parse(newData);
-
-            }
-
-
-            return [];
-
-        } catch {
-
-            return [];
-
-        }
-
-    });
+    useEffect(() => {
+        if (!friends.length) { setFriendStatusMap({}); return; }
+        let cancelled = false;
+        const loadFriendStatuses = async () => {
+            const entries = await Promise.all(friends.map(async friend => {
+                try {
+                    const data = await apiRequest("/api/users/" + friend.id + "/status");
+                    return [friend.id, data.statuses || []];
+                } catch (error) {
+                    console.error("Friend status load failed:", error.message);
+                    return [friend.id, []];
+                }
+            }));
+            if (!cancelled) setFriendStatusMap(Object.fromEntries(entries));
+        };
+        loadFriendStatuses();
+        const timer = setInterval(loadFriendStatuses, 10000);
+        return () => { cancelled = true; clearInterval(timer); };
+    }, [friends]);
 
 
     // =========================================================
@@ -249,64 +270,15 @@ function Chat() {
     };
 
 
-    const getFriendStatuses = (friend) => {
-
-        if (!friend) return [];
-
-
-        try {
-
-            const key =
-                getStatusKey(friend.id);
-
-
-            const data =
-                localStorage.getItem(key);
-
-
-            if (!data) {
-
-                return [];
-
-            }
-
-
-            const parsed =
-                JSON.parse(data);
-
-
-            return Array.isArray(parsed)
-                ? parsed
-                : [];
-
-        } catch {
-
-            return [];
-
-        }
-
-    };
+    const getFriendStatuses = (friend) =>
+        friend ? (friendStatusMap[friend.id] || []) : [];
 
 
     // =========================================================
     // SAVE MY STATUS
     // =========================================================
 
-    const saveMyStatus = (data) => {
-
-        localStorage.setItem(
-
-            getStatusKey(user.gameId),
-
-            JSON.stringify(data)
-
-        );
-
-
-        // keep old key for compatibility
-
-
-    };
+    const saveMyStatus = (data) => setMyStatus(data);
 
 
     // =========================================================
@@ -322,9 +294,12 @@ function Chat() {
         const finishOne = () => {
             pending -= 1;
             if (pending === 0 && newStatuses.length) {
-                const updated = [...myStatus, ...newStatuses];
-                setMyStatus(updated);
-                saveMyStatus(updated);
+                Promise.all(newStatuses.map(status => apiRequest("/api/users/status", {
+                    method: "POST",
+                    body: JSON.stringify({ mediaUrl: status.url, type: status.type })
+                }))).then(() => apiRequest("/api/users/status"))
+                  .then(data => setMyStatus(data.statuses || []))
+                  .catch(error => alert("Status upload failed: " + error.message));
             }
         };
 
@@ -358,23 +333,15 @@ function Chat() {
 
     const deleteMyStatus = (id) => {
 
-        const updated =
-            myStatus.filter(
-                s => s.id !== id
-            );
-
-
-        setMyStatus(updated);
-
-
-        saveMyStatus(updated);
-
-
-        if (updated.length === 0) {
-
-            closeStatusViewer();
-
-        }
+        apiRequest("/api/users/status/" + id, { method: "DELETE" })
+            .then(() => apiRequest("/api/users/status"))
+            .then(data => {
+                const updated = data.statuses || [];
+                setMyStatus(updated);
+                setFriendStatuses(updated);
+                if (!updated.length) closeStatusViewer();
+            })
+            .catch(error => alert(error.message));
 
     };
 
@@ -422,18 +389,11 @@ function Chat() {
         if (!friend) return;
 
 
-        const statuses =
-            getFriendStatuses(friend);
-
+        const statuses = getFriendStatuses(friend);
 
         if (!statuses.length) {
-
-            alert(
-                `${friend.name} has no status`
-            );
-
+            alert(`${friend.name} has no status`);
             return;
-
         }
 
 
@@ -806,24 +766,11 @@ function Chat() {
             statusOwner?.type === "friend"
         ) {
 
-            const key =
-                getStatusKey(
-                    statusOwner.id
-                );
+            // A viewer cannot delete another user's status.
+            closeStatusViewer();
+            return;
 
-
-            const updated =
-                friendStatuses.filter(
-                    s => s.id !== current.id
-                );
-
-
-            localStorage.setItem(
-                key,
-                JSON.stringify(updated)
-            );
-
-
+            const updated = friendStatuses.filter(s => s.id !== current.id);
             setFriendStatuses(updated);
 
 
