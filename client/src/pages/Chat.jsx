@@ -1408,7 +1408,10 @@ function Chat() {
 
                                             >
 
-                                                👤 {f.name}
+                                                <span className="friend-avatar">
+                                                    {f.profilePhoto ? <img src={f.profilePhoto} alt="" /> : "👤"}
+                                                </span>
+                                                <span className="friend-label">{f.name}</span>
 
 
                                                 {
