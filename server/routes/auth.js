@@ -25,6 +25,25 @@ router.post('/login', async (req,res) => {
     res.json({token:makeToken(user),user:safeUser(user)});
   } catch(e) { console.error(e); res.status(500).json({message:'Login failed.'}); }
 });
+router.get('/recovery-status', async (req,res) => {
+  try {
+    const user = await prisma.user.findUnique({ where:{ id:req.user.id }, select:{ petAnswerHash:true } });
+    if (!user) return res.status(404).json({ message:'User not found.' });
+    res.json({ recoveryConfigured: Boolean(user.petAnswerHash) });
+  } catch(e) { console.error(e); res.status(500).json({ message:'Could not check recovery setup.' }); }
+});
+router.put('/recovery-answer', async (req,res) => {
+  try {
+    const petAnswer = String(req.body.petAnswer || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
+    if (petAnswer.length < 2 || password.length < 8) return res.status(400).json({ message:'Enter a recovery answer and your current password (minimum 8 characters).' });
+    const user = await prisma.user.findUnique({ where:{ id:req.user.id } });
+    if (!user || !await bcrypt.compare(password, user.passwordHash)) return res.status(401).json({ message:'Current password is incorrect.' });
+    const petAnswerHash = await bcrypt.hash(petAnswer, 12);
+    await prisma.user.update({ where:{ id:req.user.id }, data:{ petAnswerHash } });
+    res.json({ message:'Password recovery answer saved successfully.' });
+  } catch(e) { console.error(e); res.status(500).json({ message:'Could not save recovery answer.' }); }
+});
 router.get('/me', async (req,res) => {
   const user=await prisma.user.findUnique({where:{id:req.user.id}});
   if(!user) return res.status(404).json({message:'User not found.'});
