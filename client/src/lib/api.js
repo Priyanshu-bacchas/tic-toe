@@ -1,6 +1,6 @@
-// Empty API base uses the same Render origin in production.
-// Set VITE_API_URL only when the frontend and API are hosted separately.
-const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+// Production API URL works for both the hosted web app and the Android APK.
+// Override with VITE_API_URL only if the API is moved to another host.
+const API_BASE = (import.meta.env.VITE_API_URL || "https://tic-toe-eynw.onrender.com").replace(/\/$/, "");
 
 export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem("auth_token");
