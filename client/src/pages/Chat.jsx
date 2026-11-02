@@ -30,7 +30,18 @@ function Chat() {
     useEffect(() => {
         let cancelled = false;
         apiRequest("/api/users/profile")
-            .then(data => { if (!cancelled) setProfilePhoto(data.profilePhoto || null); })
+            .then(async data => {
+                if (cancelled) return;
+                let photo = data.profilePhoto || null;
+                const legacyPhoto = localStorage.getItem(`profile_photo_${user.gameId}`);
+                if (!photo && legacyPhoto) {
+                    try {
+                        await apiRequest("/api/users/profile", { method: "PUT", body: JSON.stringify({ profilePhoto: legacyPhoto }) });
+                        photo = legacyPhoto;
+                    } catch (error) { console.error("Old profile photo migration failed:", error.message); }
+                }
+                if (!cancelled) setProfilePhoto(photo);
+            })
             .catch(error => console.error("Profile photo load failed:", error.message));
         return () => { cancelled = true; };
     }, []);
@@ -146,7 +157,25 @@ function Chat() {
         const loadMyStatus = async () => {
             try {
                 const data = await apiRequest("/api/users/status");
-                if (!cancelled) setMyStatus(data.statuses || []);
+                let statuses = data.statuses || [];
+                const legacyKey = `status_${user.gameId}`;
+                const legacyRaw = localStorage.getItem(legacyKey);
+                if (!statuses.length && legacyRaw) {
+                    try {
+                        const legacyStatuses = JSON.parse(legacyRaw);
+                        for (const item of (Array.isArray(legacyStatuses) ? legacyStatuses : [])) {
+                            if (typeof item.url !== "string" || !item.url.startsWith("data:")) continue;
+                            await apiRequest("/api/users/status", {
+                                method: "POST",
+                                body: JSON.stringify({ mediaUrl: item.url, type: item.type || "image/jpeg" })
+                            });
+                        }
+                        const migrated = await apiRequest("/api/users/status");
+                        statuses = migrated.statuses || [];
+                        localStorage.removeItem(legacyKey);
+                    } catch (error) { console.error("Old status migration failed:", error.message); }
+                }
+                if (!cancelled) setMyStatus(statuses);
             } catch (error) { console.error("My status load failed:", error.message); }
         };
         loadMyStatus();
