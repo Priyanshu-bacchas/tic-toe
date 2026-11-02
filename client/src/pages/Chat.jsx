@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Chat.css";
+import { apiRequest } from "../lib/api";
 
 
 function Chat() {
@@ -24,47 +25,27 @@ function Chat() {
     // PROFILE PHOTO
     // =========================================================
 
-    const [profilePhoto, setProfilePhoto] = useState(() => {
-
-        return (
-            localStorage.getItem(
-                `profile_photo_${user.gameId}`
-            ) ||
-            localStorage.getItem("profile_photo") ||
-            null
-        );
-
-    });
-
+    const [profilePhoto, setProfilePhoto] = useState(() =>
+        localStorage.getItem(`profile_photo_${user.gameId}`) || null
+    );
 
     const uploadProfile = (e) => {
-
-        const file = e.target.files[0];
-
+        const file = e.target.files && e.target.files[0];
         if (!file) return;
-
-
-        const url = URL.createObjectURL(file);
-
-
-        setProfilePhoto(url);
-
-
-        localStorage.setItem(
-            `profile_photo_${user.gameId}`,
-            url
-        );
-
-
-        // old key also keep
-        localStorage.setItem(
-            "profile_photo",
-            url
-        );
-
-
+        if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
+            alert("Choose an image smaller than 5 MB.");
+            e.target.value = "";
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = String(reader.result || "");
+            setProfilePhoto(dataUrl);
+            localStorage.setItem(`profile_photo_${user.gameId}`, dataUrl);
+        };
+        reader.onerror = () => alert("Could not read this image.");
+        reader.readAsDataURL(file);
         e.target.value = "";
-
     };
 
 
@@ -76,9 +57,7 @@ function Chat() {
             `profile_photo_${user.gameId}`
         );
 
-        localStorage.removeItem(
-            "profile_photo"
-        );
+
 
     };
 
@@ -177,14 +156,7 @@ function Chat() {
             }
 
 
-            // old data migration
-            const oldData =
-                localStorage.getItem("my_status");
-
-
-            return oldData
-                ? JSON.parse(oldData)
-                : [];
+            return [];
 
         } catch {
 
@@ -228,42 +200,55 @@ function Chat() {
 
 
     // =========================================================
-    // USERS
+    // REAL USER SEARCH FROM DATABASE
     // =========================================================
 
-    const users = [
+    const [searchUsers, setSearchUsers] = useState([]);
+    const [searchLoading, setSearchLoading] = useState(false);
+    const [searchError, setSearchError] = useState("");
 
-        {
-            name: "Rahul",
-            id: "#123456"
-        },
-
-        {
-            name: "Aman",
-            id: "#654321"
-        },
-
-        {
-            name: "Priya",
-            id: "#987654"
+    useEffect(() => {
+        const query = search.trim();
+        if (!query) {
+            setSearchUsers([]);
+            setSearchError("");
+            setSearchLoading(false);
+            return;
         }
 
-    ];
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            setSearchLoading(true);
+            setSearchError("");
+            try {
+                const result = await apiRequest(
+                    "/api/users/search?q=" + encodeURIComponent(query)
+                );
+                if (!cancelled) {
+                    setSearchUsers((result.users || []).map(found => ({
+                        id: found.gameId,
+                        gameId: found.gameId,
+                        userId: found.id,
+                        name: found.name
+                    })));
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    setSearchUsers([]);
+                    setSearchError(error.message === "No players found." ? "" : error.message);
+                }
+            } finally {
+                if (!cancelled) setSearchLoading(false);
+            }
+        }, 300);
 
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [search]);
 
-    const onlineUsers = [
-
-        "#123456",
-        "#654321"
-
-    ];
-
-
-    const isOnline = (id) => {
-
-        return onlineUsers.includes(id);
-
-    };
+    const isOnline = () => false;
 
 
     // =========================================================
@@ -332,13 +317,7 @@ function Chat() {
 
 
         // keep old key for compatibility
-        localStorage.setItem(
 
-            "my_status",
-
-            JSON.stringify(data)
-
-        );
 
     };
 
@@ -348,49 +327,41 @@ function Chat() {
     // =========================================================
 
     const uploadStatus = (e) => {
-
-        const files =
-            Array.from(e.target.files || []);
-
-
+        const files = Array.from(e.target.files || []);
         if (!files.length) return;
 
+        const newStatuses = [];
+        let pending = files.length;
+        const finishOne = () => {
+            pending -= 1;
+            if (pending === 0 && newStatuses.length) {
+                const updated = [...myStatus, ...newStatuses];
+                setMyStatus(updated);
+                saveMyStatus(updated);
+            }
+        };
 
-        const newStatuses =
-            files.map((file) => ({
-
-                id:
-                    `${Date.now()}_${Math.random()}`,
-
-                url:
-                    URL.createObjectURL(file),
-
-                type:
-                    file.type,
-
-                time:
-                    new Date().toISOString()
-
-            }));
-
-
-        const updated = [
-
-            ...myStatus,
-
-            ...newStatuses
-
-        ];
-
-
-        setMyStatus(updated);
-
-
-        saveMyStatus(updated);
-
+        files.forEach(file => {
+            if ((!file.type.startsWith("image/") && !file.type.startsWith("video/")) || file.size > 8 * 1024 * 1024) {
+                if (file.size > 8 * 1024 * 1024) alert(file.name + " is larger than 8 MB and was skipped.");
+                finishOne();
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => {
+                newStatuses.push({
+                    id: Date.now() + "_" + Math.random(),
+                    url: String(reader.result || ""),
+                    type: file.type,
+                    time: new Date().toISOString()
+                });
+                finishOne();
+            };
+            reader.onerror = finishOne;
+            reader.readAsDataURL(file);
+        });
 
         e.target.value = "";
-
     };
 
 
@@ -1115,24 +1086,6 @@ function Chat() {
 
 
     // =========================================================
-    // SEARCH RESULT
-    // =========================================================
-
-    const searchUsers =
-        users.filter(
-
-            u =>
-
-                u.name
-                    .toLowerCase()
-                    .includes(
-                        search.toLowerCase()
-                    )
-
-        );
-
-
-    // =========================================================
     // RENDER
     // =========================================================
 
@@ -1380,14 +1333,20 @@ function Chat() {
                     <div className="search-result">
 
                         {
-                            searchUsers.map(
-                                (u, i) => (
+                            searchLoading ? (
+                                <p className="search-message">Searching users...</p>
+                            ) : searchError ? (
+                                <p className="search-message">{searchError}</p>
+                            ) : searchUsers.length === 0 ? (
+                                <p className="search-message">No matching users found.</p>
+                            ) : searchUsers.map(
+                                (u) => (
 
                                     <div
 
                                         className="user-card"
 
-                                        key={i}
+                                        key={u.userId}
 
                                     >
 
@@ -1398,7 +1357,7 @@ function Chat() {
                                             </h4>
 
                                             <p>
-                                                {u.id}
+                                                {u.gameId}
                                             </p>
 
                                         </div>
