@@ -206,3 +206,45 @@ button:hover{
 transform:translateY(-3px);
 
 }
+
+.recovery-btn{
+  width:100%;
+  min-height:48px;
+  height:auto;
+  padding:12px 16px;
+  margin-top:14px;
+  border:1px solid #c7d2fe;
+  border-radius:24px;
+  color:#5b55a5;
+  background:#f5f3ff;
+  font-size:14px;
+}
+.recovery-panel{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  margin-top:14px;
+  padding:16px;
+  border:1px solid #ddd6fe;
+  border-radius:18px;
+  background:#faf9ff;
+  text-align:left;
+}
+.recovery-panel p,.recovery-message{
+  color:#64748b;
+  font-size:13px;
+  line-height:1.5;
+}
+.recovery-panel input{
+  width:100%;
+  height:46px;
+  padding:0 14px;
+  border:1px solid #c7d2fe;
+  border-radius:12px;
+  background:white;
+  font-size:14px;
+  outline:none;
+}
+.recovery-panel input:focus{border-color:#667eea}
+.recovery-panel .main-btn{margin-top:0;font-size:13px}
+.recovery-message{margin-top:10px;color:#4c3d91}
