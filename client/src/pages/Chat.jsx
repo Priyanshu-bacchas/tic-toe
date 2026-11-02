@@ -77,7 +77,6 @@ function Chat() {
     const [requests, setRequests] = useState([]);
     const [outgoingRequests, setOutgoingRequests] = useState([]);
     const [selected, setSelected] = useState(null);
-    const [chatLoading, setChatLoading] = useState(false);
 
     const refreshSocialData = async () => {
         try {
@@ -938,30 +937,32 @@ function Chat() {
         if (!selected || !selected.id) return;
         let cancelled = false;
         const loadMessages = async () => {
-            setChatLoading(true);
             try {
                 const data = await apiRequest("/api/chat/" + selected.id);
                 if (!cancelled) {
-                    setMessages(previous => ({
-                        ...previous,
-                        [selected.id]: (data.messages || []).map(item => ({
-                            text: item.content,
-                            time: new Date(item.createdAt).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit"
-                            }),
-                            senderId: item.senderId
-                        }))
+                    const freshMessages = (data.messages || []).map(item => ({
+                        text: item.content,
+                        time: new Date(item.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit"
+                        }),
+                        senderId: item.senderId
                     }));
+
+                    setMessages(previous => {
+                        const currentMessages = previous[selected.id] || [];
+                        if (JSON.stringify(currentMessages) === JSON.stringify(freshMessages)) {
+                            return previous;
+                        }
+                        return { ...previous, [selected.id]: freshMessages };
+                    });
                 }
             } catch (error) {
-                if (!cancelled) console.error("Message load failed:", error.message);
-            } finally {
-                if (!cancelled) setChatLoading(false);
+                if (!cancelled) console.error("Message refresh failed:", error.message);
             }
         };
         loadMessages();
-        const timer = setInterval(loadMessages, 2500);
+        const timer = setInterval(loadMessages, 3000);
         return () => {
             cancelled = true;
             clearInterval(timer);
@@ -1671,9 +1672,6 @@ function Chat() {
 
 
                                 {
-                                    chatLoading ? (
-                                        <p className="chat-loading">Loading messages...</p>
-                                    ) : (
                                     (
                                         messages[
                                             selected.id
@@ -1730,7 +1728,6 @@ function Chat() {
 
                                             )
                                         )
-                                    )
                                 }
 
                             </div>
