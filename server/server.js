@@ -1,23 +1,30 @@
 require('dotenv').config();
-const express=require('express'),http=require('http'),cors=require('cors'),jwt=require('jsonwebtoken');
+const express=require('express'),http=require('http'),cors=require('cors'),jwt=require('jsonwebtoken'),path=require('path');
 const {Server}=require('socket.io');
 const prisma=require('./prisma'),auth=require('./middleware/auth');
 const app=express(),server=http.createServer(app);
-const origins=(process.env.CLIENT_URL||'http://localhost:5173').split(',').map(x=>x.trim());
-app.use(cors({origin:origins,credentials:true}));app.use(express.json({limit:'1mb'}));
-const io=new Server(server,{cors:{origin:origins,methods:['GET','POST','PUT']}});
+const origins=(process.env.CLIENT_URL||'').split(',').map(x=>x.trim()).filter(Boolean);
+const allowedOrigins=[...origins,'capacitor://localhost','http://localhost','https://localhost'];
+app.use(cors({origin:(origin,callback)=>callback(null,!origin||allowedOrigins.includes(origin)||origins.includes('*')),credentials:false}));
+app.use(express.json({limit:'1mb'}));
+const io=new Server(server,{cors:{origin:allowedOrigins.length?allowedOrigins:true,methods:['GET','POST','PUT']}});
 app.set('io',io);
 io.use((socket,next)=>{try{const token=socket.handshake.auth?.token;if(!token)throw Error();socket.user=jwt.verify(token,process.env.JWT_SECRET);next();}catch{next(new Error('Unauthorized'));}});
 io.on('connection',socket=>{socket.join(socket.user.id);socket.on('call:signal',data=>{if(data?.to&&data?.signal)io.to(data.to).emit('call:signal',{from:socket.user.id,signal:data.signal});});socket.on('call:end',data=>{if(data?.to)io.to(data.to).emit('call:end',{from:socket.user.id});});});
-app.get('/',(req,res)=>res.json({name:'Zero Cross API',status:'running'}));
 app.get('/api/health',(req,res)=>res.json({ok:true}));
+app.get('/api',(req,res)=>res.json({name:'Zero Cross API',status:'running'}));
 app.use('/api/auth',require('./routes/auth-public'));
 app.use('/api/auth',auth,require('./routes/auth'));
 app.use('/api/game',auth,require('./routes/game'));
 app.use('/api/users',auth,require('./routes/users'));
 app.use('/api/chat',auth,require('./routes/chat'));
 app.use('/api/calls',auth,require('./routes/calls'));
+
+// Serve the React build from the same Render service and domain.
+const webRoot=path.join(__dirname,'../client/dist');
+app.use(express.static(webRoot));
+app.get(/^(?!\/api(?:\/|$)).*/, (req,res)=>res.sendFile(path.join(webRoot,'index.html'),err=>{if(err)res.status(404).send('Frontend build not found. Run the client build step.');}));
 app.use((err,req,res,next)=>{console.error(err);res.status(500).json({message:'Internal server error.'});});
 const cleanup=setInterval(async()=>{try{const expired=await prisma.message.findMany({where:{expiresAt:{lte:new Date()}},select:{id:true,senderId:true,receiverId:true}});if(!expired.length)return;await prisma.message.deleteMany({where:{id:{in:expired.map(m=>m.id)}}});for(const m of expired){io.to(m.senderId).emit('message:deleted',{id:m.id});io.to(m.receiverId).emit('message:deleted',{id:m.id});}}catch(e){console.error('Expiry cleanup failed:',e.message);}},2000);
-const port=process.env.PORT||5000;server.listen(port,()=>console.log('Zero Cross API running on '+port));
+const port=process.env.PORT||5000;server.listen(port,()=>console.log('Zero Cross API + Web running on '+port));
 process.on('SIGINT',async()=>{clearInterval(cleanup);await prisma.$disconnect();server.close(()=>process.exit(0));});
