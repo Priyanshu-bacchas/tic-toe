@@ -21,9 +21,10 @@ app.use('/api/chat',auth,require('./routes/chat'));
 app.use('/api/calls',auth,require('./routes/calls'));
 
 // Serve the React build from the same Render service and domain.
-const webRoot=path.join(__dirname,'../client/dist');
+const webRoot=path.resolve(__dirname,'../client/dist');
+const frontendIndex=path.join(webRoot,'index.html');
 app.use(express.static(webRoot));
-app.get(/^(?!\/api(?:\/|$)).*/, (req,res)=>res.sendFile(path.join(webRoot,'index.html'),err=>{if(err)res.status(404).send('Frontend build not found. Run the client build step.');}));
+app.get(/^(?!\/api(?:\/|$)).*/, (req,res)=>res.sendFile(frontendIndex,err=>{if(err){console.error('Frontend build missing:',frontendIndex,err.message);res.status(503).type('text').send('Frontend build is missing. Render must build from the repository root using: npm run build');}}));
 app.use((err,req,res,next)=>{console.error(err);res.status(500).json({message:'Internal server error.'});});
 const cleanup=setInterval(async()=>{try{const expired=await prisma.message.findMany({where:{expiresAt:{lte:new Date()}},select:{id:true,senderId:true,receiverId:true}});if(!expired.length)return;await prisma.message.deleteMany({where:{id:{in:expired.map(m=>m.id)}}});for(const m of expired){io.to(m.senderId).emit('message:deleted',{id:m.id});io.to(m.receiverId).emit('message:deleted',{id:m.id});}}catch(e){console.error('Expiry cleanup failed:',e.message);}},2000);
 const port=process.env.PORT||5000;server.listen(port,()=>console.log('Zero Cross API + Web running on '+port));
