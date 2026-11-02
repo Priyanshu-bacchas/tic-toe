@@ -1,4 +1,6 @@
-const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
+// Empty API base uses the same Render origin in production.
+// Set VITE_API_URL only when the frontend and API are hosted separately.
+const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem("auth_token");
