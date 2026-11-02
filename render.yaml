@@ -4,8 +4,9 @@ services:
     runtime: node
     plan: free
     region: singapore
-    buildCommand: cd server && npm install && npx prisma generate && cd ../client && npm install && npm run build
-    startCommand: cd server && npm start
+    rootDir: .
+    buildCommand: npm run build
+    startCommand: npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
