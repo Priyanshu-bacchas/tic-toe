@@ -1,0 +1,9 @@
+{
+  "appId": "com.zerocross.game",
+  "appName": "Zero Cross",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
