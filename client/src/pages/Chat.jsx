@@ -1971,22 +1971,33 @@ function Chat() {
                     }
 
 
-                  {/* DELETE */}
+                    <button
+                        type="button"
+                        className="status-close-btn"
+                        onClick={closeStatusViewer}
+                        aria-label="Close status"
+                        title="Close"
+                    >
+                        ✕
+                    </button>
 
-<button
-    onClick={deleteCurrentStatus}
->
-    🗑 Delete
-</button>
+                    {statusOwner?.type === "mine" && (
+                        <button
+                            type="button"
+                            className="status-delete-btn"
+                            onClick={deleteCurrentStatus}
+                        >
+                            🗑 Delete
+                        </button>
+                    )}
 
-
-{/* CANCEL */}
-
-<button
-    onClick={closeStatusViewer}
->
-    Cancel
-</button>
+                    <button
+                        type="button"
+                        className="status-cancel-btn"
+                        onClick={closeStatusViewer}
+                    >
+                        Close
+                    </button>
 
 
                 </div>
