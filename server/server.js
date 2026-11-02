@@ -6,7 +6,7 @@ const app=express(),server=http.createServer(app);
 const origins=(process.env.CLIENT_URL||'').split(',').map(x=>x.trim()).filter(Boolean);
 const allowedOrigins=[...origins,'capacitor://localhost','http://localhost','https://localhost'];
 app.use(cors({origin:(origin,callback)=>callback(null,!origin||allowedOrigins.includes(origin)||origins.includes('*')),credentials:false}));
-app.use(express.json({limit:'1mb'}));
+app.use(express.json({limit:'12mb'}));
 const io=new Server(server,{cors:{origin:allowedOrigins.length?allowedOrigins:true,methods:['GET','POST','PUT']}});
 app.set('io',io);
 io.use((socket,next)=>{try{const token=socket.handshake.auth?.token;if(!token)throw Error();socket.user=jwt.verify(token,process.env.JWT_SECRET);next();}catch{next(new Error('Unauthorized'));}});
