@@ -73,25 +73,31 @@ function Chat() {
     // FRIENDS
     // =========================================================
 
-    const [friends, setFriends] = useState(
-
-        JSON.parse(
-            localStorage.getItem("friends")
-        ) || []
-
-    );
-
-
-    const [requests, setRequests] = useState(
-
-        JSON.parse(
-            localStorage.getItem("requests")
-        ) || []
-
-    );
-
-
+    const [friends, setFriends] = useState([]);
+    const [requests, setRequests] = useState([]);
+    const [outgoingRequests, setOutgoingRequests] = useState([]);
     const [selected, setSelected] = useState(null);
+    const [chatLoading, setChatLoading] = useState(false);
+
+    const refreshSocialData = async () => {
+        try {
+            const [friendData, requestData] = await Promise.all([
+                apiRequest("/api/users/friends"),
+                apiRequest("/api/users/requests")
+            ]);
+            setFriends(friendData.friends || []);
+            setRequests(requestData.incoming || []);
+            setOutgoingRequests(requestData.outgoing || []);
+        } catch (error) {
+            console.error("Social data refresh failed:", error.message);
+        }
+    };
+
+    useEffect(() => {
+        refreshSocialData();
+        const timer = setInterval(refreshSocialData, 4000);
+        return () => clearInterval(timer);
+    }, []);
 
 
     // =========================================================
@@ -101,25 +107,7 @@ function Chat() {
     const [message, setMessage] = useState("");
 
 
-    const [messages, setMessages] = useState(() => {
-
-        try {
-
-            return (
-                JSON.parse(
-                    localStorage.getItem(
-                        "chat_messages"
-                    )
-                ) || {}
-            );
-
-        } catch {
-
-            return {};
-
-        }
-
-    });
+    const [messages, setMessages] = useState({});
 
 
     // =========================================================
@@ -869,224 +857,118 @@ function Chat() {
     // SEND FRIEND REQUEST
     // =========================================================
 
-    const sendRequest = (u) => {
-
-        const alreadyFriend =
-            friends.find(
-                f => f.id === u.id
-            );
-
-
-        if (alreadyFriend) {
-
-            alert("Already Friend");
-
+    const sendRequest = async (u) => {
+        if (friends.some(friend => friend.id === u.userId) ||
+            outgoingRequests.some(request => request.id === u.userId)) {
+            alert("Already friends or request already sent.");
             return;
-
         }
-
-
-        const alreadyRequest =
-            requests.find(
-                r => r.id === u.id
-            );
-
-
-        if (alreadyRequest) {
-
-            alert(
-                "Request Already Sent"
-            );
-
-            return;
-
+        try {
+            await apiRequest("/api/users/requests", {
+                method: "POST",
+                body: JSON.stringify({ receiverId: u.userId })
+            });
+            await refreshSocialData();
+            alert("Friend request sent.");
+        } catch (error) {
+            alert(error.message);
         }
-
-
-        const updated = [
-
-            ...requests,
-
-            u
-
-        ];
-
-
-        setRequests(updated);
-
-
-        localStorage.setItem(
-
-            "requests",
-
-            JSON.stringify(updated)
-
-        );
-
-
-        alert(
-            "Friend Request Sent"
-        );
-
     };
 
-
-    // =========================================================
-    // ACCEPT REQUEST
-    // =========================================================
-
-    const acceptRequest = (req) => {
-
-        const updatedFriends = [
-
-            ...friends,
-
-            req
-
-        ];
-
-
-        setFriends(updatedFriends);
-
-
-        localStorage.setItem(
-
-            "friends",
-
-            JSON.stringify(updatedFriends)
-
-        );
-
-
-        const updatedRequests =
-            requests.filter(
-                r => r.id !== req.id
-            );
-
-
-        setRequests(updatedRequests);
-
-
-        localStorage.setItem(
-
-            "requests",
-
-            JSON.stringify(updatedRequests)
-
-        );
-
+    const acceptRequest = async (request) => {
+        try {
+            await apiRequest("/api/users/requests/" + request.requestId, {
+                method: "PUT",
+                body: JSON.stringify({ action: "accept" })
+            });
+            await refreshSocialData();
+        } catch (error) {
+            alert(error.message);
+        }
     };
 
-
-    // =========================================================
-    // REJECT REQUEST
-    // =========================================================
-
-    const rejectRequest = (req) => {
-
-        const updatedRequests =
-            requests.filter(
-                r => r.id !== req.id
-            );
-
-
-        setRequests(updatedRequests);
-
-
-        localStorage.setItem(
-
-            "requests",
-
-            JSON.stringify(updatedRequests)
-
-        );
-
+    const rejectRequest = async (request) => {
+        try {
+            await apiRequest("/api/users/requests/" + request.requestId, {
+                method: "PUT",
+                body: JSON.stringify({ action: "reject" })
+            });
+            await refreshSocialData();
+        } catch (error) {
+            alert(error.message);
+        }
     };
-
 
     // =========================================================
     // SEND MESSAGE
     // =========================================================
 
-    const sendMessage = () => {
-
-        if (
-            !message.trim() ||
-            !selected
-        ) {
-
-            return;
-
+    const sendMessage = async () => {
+        if (!message.trim() || !selected) return;
+        try {
+            const result = await apiRequest("/api/chat/message", {
+                method: "POST",
+                body: JSON.stringify({
+                    receiverId: selected.id,
+                    content: message.trim()
+                })
+            });
+            const sent = result.message;
+            setMessages(previous => ({
+                ...previous,
+                [selected.id]: [
+                    ...(previous[selected.id] || []),
+                    {
+                        text: sent.content,
+                        time: new Date(sent.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit"
+                        }),
+                        senderId: sent.senderId
+                    }
+                ]
+            }));
+            setMessage("");
+        } catch (error) {
+            alert(error.message);
         }
-
-
-        const id =
-            selected.id;
-
-
-        const old =
-            messages[id] || [];
-
-
-        const data = {
-
-            text:
-                message.trim(),
-
-            time:
-                new Date()
-                    .toLocaleTimeString(
-                        [],
-                        {
-                            hour:
-                                "2-digit",
-
-                            minute:
-                                "2-digit"
-                        }
-                    )
-
-        };
-
-
-        const updatedMessages = {
-
-            ...messages,
-
-            [id]: [
-
-                ...old,
-
-                data
-
-            ]
-
-        };
-
-
-        setMessages(
-            updatedMessages
-        );
-
-
-        localStorage.setItem(
-
-            "chat_messages",
-
-            JSON.stringify(
-                updatedMessages
-            )
-
-        );
-
-
-        setMessage("");
-
     };
 
+    useEffect(() => {
+        if (!selected || !selected.id) return;
+        let cancelled = false;
+        const loadMessages = async () => {
+            setChatLoading(true);
+            try {
+                const data = await apiRequest("/api/chat/" + selected.id);
+                if (!cancelled) {
+                    setMessages(previous => ({
+                        ...previous,
+                        [selected.id]: (data.messages || []).map(item => ({
+                            text: item.content,
+                            time: new Date(item.createdAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit"
+                            }),
+                            senderId: item.senderId
+                        }))
+                    }));
+                }
+            } catch (error) {
+                if (!cancelled) console.error("Message load failed:", error.message);
+            } finally {
+                if (!cancelled) setChatLoading(false);
+            }
+        };
+        loadMessages();
+        const timer = setInterval(loadMessages, 2500);
+        return () => {
+            cancelled = true;
+            clearInterval(timer);
+        };
+    }, [selected && selected.id]);
 
-    // =========================================================
-    // RENDER
+    // RENDER    // RENDER
     // =========================================================
 
     return (
@@ -1339,7 +1221,10 @@ function Chat() {
                                 <p className="search-message">{searchError}</p>
                             ) : searchUsers.length === 0 ? (
                                 <p className="search-message">No matching users found.</p>
-                            ) : searchUsers.map(
+                            ) : searchUsers.filter(u =>
+                                !friends.some(friend => friend.id === u.userId) &&
+                                !outgoingRequests.some(request => request.id === u.userId)
+                            ).map(
                                 (u) => (
 
                                     <div
@@ -1442,7 +1327,7 @@ function Chat() {
 
                                             className="user-card"
 
-                                            key={i}
+                                            key={r.requestId}
 
                                         >
 
@@ -1453,7 +1338,7 @@ function Chat() {
                                                 </h4>
 
                                                 <p>
-                                                    {r.id}
+                                                    {r.gameId}
                                                 </p>
 
                                             </div>
@@ -1786,6 +1671,9 @@ function Chat() {
 
 
                                 {
+                                    chatLoading ? (
+                                        <p className="chat-loading">Loading messages...</p>
+                                    ) : (
                                     (
                                         messages[
                                             selected.id
@@ -1824,7 +1712,7 @@ function Chat() {
 
                                                 <div
 
-                                                    className="message"
+                                                    className={m.senderId === user.id ? "message sent" : "message received"}
 
                                                     key={i}
 
@@ -1842,6 +1730,7 @@ function Chat() {
 
                                             )
                                         )
+                                    )
                                 }
 
                             </div>
