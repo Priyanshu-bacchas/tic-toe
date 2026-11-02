@@ -45,7 +45,7 @@ router.get('/:userId',async(req,res)=>{
  const unread={senderId:other.id,receiverId:req.user.id,readAt:null};
  if(pref?.mode==='after_seen') await prisma.message.updateMany({where:{...unread,expiresAt:null},data:{readAt:now,expiresAt:new Date(Date.now()+3000)}});
  else await prisma.message.updateMany({where:unread,data:{readAt:now}});
- const messages=await prisma.message.findMany({where:{...where,OR:undefined,AND:[{OR:[{senderId:req.user.id,receiverId:other.id},{senderId:other.id,receiverId:req.user.id}]},{OR:[{expiresAt:null},{expiresAt:{gt:new Date()}}]}]},orderBy:{createdAt:'asc'},take:300});
+ const messages=await prisma.message.findMany({where:{AND:[where,{OR:[{expiresAt:null},{expiresAt:{gt:new Date()}}]}]},orderBy:{createdAt:'asc'},take:300});
  res.json({messages,mode:pref?.mode||'off'});
 });
 router.post('/message',async(req,res)=>{
