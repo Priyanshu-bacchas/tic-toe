@@ -117,4 +117,73 @@ router.put('/requests/:requestId', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.get('/profile', async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { profilePhoto: true }
+    });
+    res.json({ profilePhoto: user?.profilePhoto || null });
+  } catch (error) { next(error); }
+});
+
+router.put('/profile', async (req, res, next) => {
+  try {
+    const profilePhoto = req.body.profilePhoto;
+    if (profilePhoto !== null && (typeof profilePhoto !== 'string' || !/^data:image\/(png|jpeg|webp|gif);base64,/.test(profilePhoto) || profilePhoto.length > 1200000)) {
+      return res.status(400).json({ message: 'Profile photo must be a supported image under 900 KB.' });
+    }
+    await prisma.user.update({ where: { id: req.user.id }, data: { profilePhoto } });
+    res.json({ profilePhoto });
+  } catch (error) { next(error); }
+});
+
+router.get('/status', async (req, res, next) => {
+  try {
+    const rows = await prisma.status.findMany({
+      where: { userId: req.user.id, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'asc' }
+    });
+    res.json({ statuses: rows.map(row => ({ id: row.id, url: row.mediaUrl, type: row.type, time: row.createdAt })) });
+  } catch (error) { next(error); }
+});
+
+router.get('/:userId/status', async (req, res, next) => {
+  try {
+    const friend = await prisma.friendRequest.findFirst({
+      where: { status: 'ACCEPTED', OR: [
+        { senderId: req.user.id, receiverId: req.params.userId },
+        { senderId: req.params.userId, receiverId: req.user.id }
+      ] }
+    });
+    if (!friend) return res.status(403).json({ message: 'You can only view a friend status.' });
+    const rows = await prisma.status.findMany({
+      where: { userId: req.params.userId, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'asc' }
+    });
+    res.json({ statuses: rows.map(row => ({ id: row.id, url: row.mediaUrl, type: row.type, time: row.createdAt })) });
+  } catch (error) { next(error); }
+});
+
+router.post('/status', async (req, res, next) => {
+  try {
+    const { mediaUrl, type } = req.body;
+    if (typeof mediaUrl !== 'string' || !/^data:(image\/(png|jpeg|webp|gif)|video\/(mp4|webm));base64,/.test(mediaUrl) || mediaUrl.length > 9000000) {
+      return res.status(400).json({ message: 'Status must be a supported image/video under 6 MB.' });
+    }
+    const row = await prisma.status.create({
+      data: { userId: req.user.id, mediaUrl, type: String(type || '').slice(0, 100), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) }
+    });
+    res.status(201).json({ status: { id: row.id, url: row.mediaUrl, type: row.type, time: row.createdAt } });
+  } catch (error) { next(error); }
+});
+
+router.delete('/status/:statusId', async (req, res, next) => {
+  try {
+    const deleted = await prisma.status.deleteMany({ where: { id: req.params.statusId, userId: req.user.id } });
+    if (!deleted.count) return res.status(404).json({ message: 'Status not found.' });
+    res.json({ ok: true });
+  } catch (error) { next(error); }
+});
+
 module.exports = router;
