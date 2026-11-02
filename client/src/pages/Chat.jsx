@@ -1522,7 +1522,9 @@ function Chat() {
 
                                     >
 
-                                        💬
+                                        {selected.profilePhoto ? (
+                                            <img src={selected.profilePhoto} alt={selected.name} className="chat-avatar-image" />
+                                        ) : "👤"}
 
                                     </div>
 
