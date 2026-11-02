@@ -81,9 +81,17 @@ router.post('/requests', async (req, res, next) => {
     if (existing?.status === 'PENDING') {
       if (existing.senderId === req.user.id) return res.status(409).json({ message: 'Friend request already sent.' });
       const accepted = await prisma.friendRequest.update({ where: { id: existing.id }, data: { status: 'ACCEPTED' } });
+      const io = req.app.get('io');
+      io.to(receiverId).emit('friend:updated', { status: accepted.status, by: req.user.id });
+      io.to(req.user.id).emit('friend:updated', { status: accepted.status, by: req.user.id });
       return res.json({ message: 'Friend request accepted.', status: accepted.status });
     }
-    const created = await prisma.friendRequest.create({ data: { senderId: req.user.id, receiverId } });
+    const created = existing
+      ? await prisma.friendRequest.update({
+          where: { id: existing.id },
+          data: { senderId: req.user.id, receiverId, status: 'PENDING', updatedAt: new Date() }
+        })
+      : await prisma.friendRequest.create({ data: { senderId: req.user.id, receiverId } });
     const io = req.app.get('io');
     io.to(receiverId).emit('friend:request', { requestId: created.id, senderId: req.user.id });
     res.status(201).json({ message: 'Friend request sent.', requestId: created.id });
