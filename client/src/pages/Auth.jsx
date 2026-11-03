@@ -14,7 +14,7 @@ function Auth() {
   const [signupPassword, setSignupPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [petAnswer, setPetAnswer] = useState("");
-  const [forgotId, setForgotId] = useState("");
+  const [forgotEmail, setForgotEmail] = useState("");
   const [forgotPet, setForgotPet] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showLogin, setShowLogin] = useState(false);
@@ -59,18 +59,18 @@ function Auth() {
   };
 
   const resetPassword = async () => {
-    if (!forgotId.trim() || !forgotPet.trim() || !newPassword) return alert("Please fill all fields.");
+    if (!forgotEmail.trim() || !forgotPet.trim() || !newPassword) return alert("Please fill all fields.");
     if (newPassword.length < 8) return alert("New password must contain at least 8 characters.");
     try {
       setLoading(true);
       const result = await apiRequest("/api/auth/forgot-password", {
         method: "POST",
-        body: JSON.stringify({ gameId: forgotId.trim(), petAnswer: forgotPet.trim(), newPassword })
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase(), petAnswer: forgotPet.trim(), newPassword })
       });
       alert(result.message || "Password updated successfully.");
       setMode("login");
       setLoginPassword("");
-      setForgotId("");
+      setForgotEmail("");
       setForgotPet("");
       setNewPassword("");
     } catch (error) { alert(error.message); }
@@ -123,8 +123,8 @@ function Auth() {
         {mode === "forgot" && (
           <div className="form">
             <h3 className="forgot-title">RESET PASSWORD</h3>
-            <p className="forgot-help">Enter your Game ID and the favourite pet answer you saved during sign up.</p>
-            <input placeholder="Game ID (e.g. #123456)" value={forgotId} onChange={e => setForgotId(e.target.value)} />
+            <p className="forgot-help">Enter your registered email address and favourite pet answer.</p>
+            <input type="email" placeholder="Registered email address" autoComplete="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} />
             <input placeholder="Favourite pet answer" value={forgotPet} onChange={e => setForgotPet(e.target.value)} />
             <div className="password-box">
               <input type={showNewPassword ? "text" : "password"} placeholder=" " autoComplete="new-password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
