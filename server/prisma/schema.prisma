@@ -15,6 +15,7 @@ model User {
   gameId          String      @unique
   pinHash         String?
   profilePhoto    String?     @db.Text
+  role            String      @default("USER")
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   stats           GameStats?
@@ -47,17 +48,16 @@ model Message {
   createdAt  DateTime @default(now())
   sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
-
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, senderId, createdAt])
   @@index([expiresAt])
 }
 
 model ChatPreference {
-  id             String   @id @default(cuid())
-  conversationKey String  @unique
-  mode           String   @default("off")
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(cuid())
+  conversationKey String   @unique
+  mode            String   @default("off")
+  updatedAt       DateTime @updatedAt
 }
 
 model CallLog {
@@ -70,11 +70,9 @@ model CallLog {
   endedAt    DateTime?
   caller     User     @relation("Caller", fields: [callerId], references: [id], onDelete: Cascade)
   receiver   User     @relation("Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
-
   @@index([callerId, startedAt])
   @@index([receiverId, startedAt])
 }
-
 
 model FriendRequest {
   id         String   @id @default(cuid())
@@ -85,12 +83,10 @@ model FriendRequest {
   updatedAt  DateTime @updatedAt
   sender     User     @relation("FriendRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
   receiver   User     @relation("FriendRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-
   @@unique([senderId, receiverId])
   @@index([receiverId, status])
   @@index([senderId, status])
 }
-
 
 model Status {
   id        String   @id @default(cuid())
@@ -100,6 +96,5 @@ model Status {
   createdAt DateTime @default(now())
   expiresAt DateTime
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@index([userId, expiresAt])
 }
