@@ -806,7 +806,7 @@ JSON.stringify(s)
 
 const savePin=async()=>{
 
-if(!/^\\d{6}$/.test(createPin)){
+if(!/^\d{6}$/.test(createPin)){
   alert("6 digit PIN required");
   return;
 }
@@ -836,7 +836,7 @@ try{
 
 const loginPrivate=async()=>{
 
-if(!/^\\d{6}$/.test(loginPin)){
+if(!/^\d{6}$/.test(loginPin)){
   alert("Enter your 6 digit PIN");
   return;
 }
