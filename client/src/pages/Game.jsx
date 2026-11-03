@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Game.css";
+import { apiRequest } from "../lib/api";
 
 
 function Game(){
@@ -803,48 +804,23 @@ JSON.stringify(s)
 // CREATE PIN
 
 
-const savePin=()=>{
+const savePin=async()=>{
 
-
-if(createPin.length!==6)
-
-{
-
-
-alert("6 digit PIN required");
-
-
-return;
-
-
+if(!/^\\d{6}$/.test(createPin)){
+  alert("6 digit PIN required");
+  return;
 }
 
-
-
-
-
-localStorage.setItem(
-
-
-"privatePin",
-
-
-createPin
-
-
-);
-
-
-
-
-
-alert("PIN Created Successfully");
-
-
-
-setCreatePin("");
-
-
+try{
+  await apiRequest("/api/auth/pin",{
+    method:"PUT",
+    body:JSON.stringify({pin:createPin})
+  });
+  alert("PIN Saved Successfully");
+  setCreatePin("");
+}catch(error){
+  alert(error.message);
+}
 
 };
 
@@ -858,36 +834,23 @@ setCreatePin("");
 // LOGIN PIN
 
 
-const loginPrivate=()=>{
+const loginPrivate=async()=>{
 
-
-let savedPin=
-
-
-localStorage.getItem("privatePin");
-
-
-
-
-if(loginPin===savedPin && savedPin)
-
-{
-
-
-navigate("/chat");
-
-
+if(!/^\\d{6}$/.test(loginPin)){
+  alert("Enter your 6 digit PIN");
+  return;
 }
 
-else{
-
-
-alert("Wrong PIN");
-
-
+try{
+  await apiRequest("/api/auth/pin/verify",{
+    method:"POST",
+    body:JSON.stringify({pin:loginPin})
+  });
+  setLoginPin("");
+  navigate("/chat");
+}catch(error){
+  alert(error.message);
 }
-
-
 
 };
 
