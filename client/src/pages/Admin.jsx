@@ -1,0 +1,1 @@
+export default function Admin(){return <main><h1>Admin Panel</h1><p>Users and Chats management</p></main>}
