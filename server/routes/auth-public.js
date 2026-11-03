@@ -25,10 +25,10 @@ router.post('/login',async(req,res)=>{
 
 router.post('/forgot-password',async(req,res)=>{
  try{
-  const gameId=String(req.body.gameId||'').trim(),petAnswer=String(req.body.petAnswer||'').trim().toLowerCase(),newPassword=String(req.body.newPassword||'');
-  if(!gameId||!petAnswer||newPassword.length<8)return res.status(400).json({message:'Enter your Game ID, favourite pet answer and a new password (minimum 8 characters).'});
-  const user=await prisma.user.findUnique({where:{gameId}});
-  if(!user||!user.petAnswerHash||!await bcrypt.compare(petAnswer,user.petAnswerHash))return res.status(400).json({message:'Wrong Game ID or favourite pet answer. Older accounts may need recovery setup first.'});
+  const email=String(req.body.email||'').trim().toLowerCase(),petAnswer=String(req.body.petAnswer||'').trim().toLowerCase(),newPassword=String(req.body.newPassword||'');
+  if(!email||!petAnswer||newPassword.length<8)return res.status(400).json({message:'Enter your registered email, favourite pet answer and a new password (minimum 8 characters).'});
+  const user=await prisma.user.findUnique({where:{email}});
+  if(!user||!user.petAnswerHash||!await bcrypt.compare(petAnswer,user.petAnswerHash))return res.status(400).json({message:'Email or favourite pet answer is incorrect. If recovery was not set up, login and set it from your Home page.'});
   const passwordHash=await bcrypt.hash(newPassword,12);
   await prisma.user.update({where:{id:user.id},data:{passwordHash}});
   res.json({message:'Password updated successfully. Please login with your new password.'});
