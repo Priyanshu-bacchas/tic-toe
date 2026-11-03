@@ -54,7 +54,7 @@ router.get('/pin/status', async (req,res) => {
 router.put('/pin', async (req,res) => {
   try {
     const pin = String(req.body.pin || '');
-    if (!/^\\d{6}$/.test(pin)) return res.status(400).json({ message:'PIN must be exactly 6 digits.' });
+    if (!/^\d{6}$/.test(pin)) return res.status(400).json({ message:'PIN must be exactly 6 digits.' });
     const pinHash = await bcrypt.hash(pin, 12);
     await prisma.user.update({ where:{ id:req.user.id }, data:{ pinHash } });
     res.json({ message:'Private PIN saved successfully.' });
@@ -63,7 +63,7 @@ router.put('/pin', async (req,res) => {
 router.post('/pin/verify', async (req,res) => {
   try {
     const pin = String(req.body.pin || '');
-    if (!/^\\d{6}$/.test(pin)) return res.status(400).json({ message:'Enter your 6 digit PIN.' });
+    if (!/^\d{6}$/.test(pin)) return res.status(400).json({ message:'Enter your 6 digit PIN.' });
     const user = await prisma.user.findUnique({ where:{ id:req.user.id }, select:{ pinHash:true } });
     if (!user || !user.pinHash || !await bcrypt.compare(pin, user.pinHash)) return res.status(401).json({ message:'Wrong PIN or PIN not created yet.' });
     res.json({ ok:true });
