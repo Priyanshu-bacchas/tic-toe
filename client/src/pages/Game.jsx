@@ -818,6 +818,7 @@ try{
   });
   alert("PIN Saved Successfully");
   setCreatePin("");
+  setPinType("");
 }catch(error){
   alert(error.message);
 }
@@ -1194,7 +1195,7 @@ Login
 
 <h4>
 
-👤 You
+👤 {user?.name || "You"}
 
 </h4>
 
