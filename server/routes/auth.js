@@ -44,6 +44,31 @@ router.put('/recovery-answer', async (req,res) => {
     res.json({ message:'Password recovery answer saved successfully.' });
   } catch(e) { console.error(e); res.status(500).json({ message:'Could not save recovery answer.' }); }
 });
+router.get('/pin/status', async (req,res) => {
+  try {
+    const user = await prisma.user.findUnique({ where:{ id:req.user.id }, select:{ pinHash:true } });
+    if (!user) return res.status(404).json({ message:'User not found.' });
+    res.json({ pinConfigured: Boolean(user.pinHash) });
+  } catch(e) { console.error(e); res.status(500).json({ message:'Could not check PIN.' }); }
+});
+router.put('/pin', async (req,res) => {
+  try {
+    const pin = String(req.body.pin || '');
+    if (!/^\\d{6}$/.test(pin)) return res.status(400).json({ message:'PIN must be exactly 6 digits.' });
+    const pinHash = await bcrypt.hash(pin, 12);
+    await prisma.user.update({ where:{ id:req.user.id }, data:{ pinHash } });
+    res.json({ message:'Private PIN saved successfully.' });
+  } catch(e) { console.error(e); res.status(500).json({ message:'Could not save PIN.' }); }
+});
+router.post('/pin/verify', async (req,res) => {
+  try {
+    const pin = String(req.body.pin || '');
+    if (!/^\\d{6}$/.test(pin)) return res.status(400).json({ message:'Enter your 6 digit PIN.' });
+    const user = await prisma.user.findUnique({ where:{ id:req.user.id }, select:{ pinHash:true } });
+    if (!user || !user.pinHash || !await bcrypt.compare(pin, user.pinHash)) return res.status(401).json({ message:'Wrong PIN or PIN not created yet.' });
+    res.json({ ok:true });
+  } catch(e) { console.error(e); res.status(500).json({ message:'PIN verification failed.' }); }
+});
 router.get('/me', async (req,res) => {
   const user=await prisma.user.findUnique({where:{id:req.user.id}});
   if(!user) return res.status(404).json({message:'User not found.'});
