@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express=require('express'),http=require('http'),cors=require('cors'),jwt=require('jsonwebtoken'),path=require('path');
 const {Server}=require('socket.io');
+const {PrismaClient}=require('@prisma/client');
 const prisma=require('./prisma'),auth=require('./middleware/auth');
 const app=express(),server=http.createServer(app);
 const origins=(process.env.CLIENT_URL||'').split(',').map(x=>x.trim()).filter(Boolean);
@@ -15,12 +16,11 @@ app.get('/api/health',(req,res)=>res.json({ok:true}));
 app.get('/api',(req,res)=>res.json({name:'Zero Cross API',status:'running'}));
 app.use('/api/auth',require('./routes/auth-public'));
 app.use('/api/auth',auth,require('./routes/auth'));
+app.use('/api/admin',auth,require('./routes/admin'));
 app.use('/api/game',auth,require('./routes/game'));
 app.use('/api/users',auth,require('./routes/users'));
 app.use('/api/chat',auth,require('./routes/chat'));
 app.use('/api/calls',auth,require('./routes/calls'));
-
-// Serve the React build from the same Render service and domain.
 const webRoot=path.resolve(__dirname,'../client/dist');
 const frontendIndex=path.join(webRoot,'index.html');
 app.use(express.static(webRoot));
