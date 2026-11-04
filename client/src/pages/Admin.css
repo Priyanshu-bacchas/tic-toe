@@ -35,3 +35,5 @@
  .adm-table th:nth-child(6),.adm-table td:nth-child(6){width:25%}
  .adm-icon-action{width:27px;height:29px;margin-right:2px}
 }
+
+.adm-logout{display:block;width:100%;margin-top:14px;padding:10px 12px;border:1px solid #ffffff30;border-radius:8px;background:#263750;color:#fff;text-align:left;font-size:13px;font-weight:600;cursor:pointer}.adm-logout:hover{background:#344967}
