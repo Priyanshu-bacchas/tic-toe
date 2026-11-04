@@ -1,41 +1,42 @@
-import { useEffect, useMemo, useState } from "react";
-import { apiRequest } from "../lib/api";
+import {useEffect,useMemo,useState} from "react";
+import {apiRequest} from "../lib/api";
 import "./Admin.css";
 
+const dateText=v=>v?new Date(v).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}):"—";
+const dateTime=v=>v?new Date(v).toLocaleString():"—";
+const initial=v=>(v||"?").trim().charAt(0).toUpperCase();
+
 export default function Admin(){
-  const [tab,setTab]=useState("users"),[users,setUsers]=useState([]),[messages,setMessages]=useState([]),[search,setSearch]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
-  async function load(){
-    setBusy(true);setError("");
-    try{
-      const data=await apiRequest(tab==="users"?"/api/admin/users":"/api/admin/chats");
-      if(tab==="users")setUsers(data.users||[]);else setMessages(data.messages||[]);
-    }catch(e){setError(e.message||"Unable to load admin data.");}
-    finally{setBusy(false);}
-  }
-  useEffect(()=>{load();},[tab]);
-  const filteredUsers=useMemo(()=>users.filter(u=>[u.name,u.email,u.gameId].join(" ").toLowerCase().includes(search.toLowerCase())),[users,search]);
-  const filteredMessages=useMemo(()=>messages.filter(m=>[m.content,m.sender?.name,m.receiver?.name,m.sender?.email,m.receiver?.email].join(" ").toLowerCase().includes(search.toLowerCase())),[messages,search]);
-  async function editUser(user){
-    const name=window.prompt("User name:",user.name);if(name===null)return;
-    const email=window.prompt("User email:",user.email);if(email===null)return;
-    try{await apiRequest("/api/admin/users/"+user.id,{method:"PATCH",body:JSON.stringify({name,email})});await load();}
-    catch(e){window.alert(e.message);}
-  }
-  async function deleteUser(user){
-    if(!window.confirm("Delete "+user.name+" and their related data permanently?"))return;
-    try{await apiRequest("/api/admin/users/"+user.id,{method:"DELETE"});await load();}
-    catch(e){window.alert(e.message);}
-  }
-  async function deleteMessage(message){
-    if(!window.confirm("Delete this chat message permanently?"))return;
-    try{await apiRequest("/api/admin/chats/"+message.id,{method:"DELETE"});await load();}
-    catch(e){window.alert(e.message);}
-  }
-  return <main className="admin-shell">
-    <header className="admin-head"><div><span className="admin-kicker">ZERO CROSS CONTROL</span><h1>Admin Panel</h1><p>Manage registered users and chat messages</p></div><button onClick={load} disabled={busy}>↻ Refresh</button></header>
-    <nav className="admin-tabs"><button className={tab==="users"?"active":""} onClick={()=>{setTab("users");setSearch("");}}>Users <b>{users.length}</b></button><button className={tab==="chats"?"active":""} onClick={()=>{setTab("chats");setSearch("");}}>Chats <b>{messages.length}</b></button></nav>
-    <input className="admin-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder={tab==="users"?"Search name, email or Game ID":"Search message or user..."}/>
-    {error&&<p className="admin-error">{error}</p>}
-    {busy?<p className="admin-empty">Loading...</p>:tab==="users"?<section className="admin-list">{filteredUsers.map(u=><article className="admin-card" key={u.id}><div className="admin-avatar">{(u.name||"?").slice(0,1).toUpperCase()}</div><div className="admin-info"><strong>{u.name}</strong><span>{u.email}</span><small>{u.gameId} · Joined {new Date(u.createdAt).toLocaleDateString()} · {(u._count?.sentMessages||0)+(u._count?.receivedMessages||0)} messages</small></div><div className="admin-actions"><button onClick={()=>editUser(u)}>Edit</button><button className="danger" onClick={()=>deleteUser(u)}>Delete</button></div></article>)}{!filteredUsers.length&&<p className="admin-empty">No users found.</p>}</section>:<section className="admin-list">{filteredMessages.map(m=><article className="admin-message" key={m.id}><div className="admin-message-top"><strong>{m.sender?.name||"User"} <span>→</span> {m.receiver?.name||"User"}</strong><small>{new Date(m.createdAt).toLocaleString()}</small></div><p>{m.content}</p><button className="danger" onClick={()=>deleteMessage(m)}>Delete message</button></article>)}{!filteredMessages.length&&<p className="admin-empty">No messages found.</p>}</section>}
-  </main>;
+ const [page,setPage]=useState("dashboard"),[stats,setStats]=useState(null),[recentUsers,setRecentUsers]=useState([]),[recentMessages,setRecentMessages]=useState([]);
+ const [users,setUsers]=useState([]),[messages,setMessages]=useState([]),[search,setSearch]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ const [selected,setSelected]=useState(null),[details,setDetails]=useState(null),[detailTab,setDetailTab]=useState("overview");
+ async function loadDashboard(){setBusy(true);setError("");try{const d=await apiRequest("/api/admin/dashboard");setStats(d.stats);setRecentUsers(d.recentUsers||[]);setRecentMessages(d.recentMessages||[]);}catch(e){setError(e.message);}finally{setBusy(false);}}
+ async function loadUsers(){setBusy(true);setError("");try{const d=await apiRequest("/api/admin/users");setUsers(d.users||[]);}catch(e){setError(e.message);}finally{setBusy(false);}}
+ async function loadChats(){setBusy(true);setError("");try{const d=await apiRequest("/api/admin/chats");setMessages(d.messages||[]);}catch(e){setError(e.message);}finally{setBusy(false);}}
+ async function load(){if(page==="dashboard")return loadDashboard();if(page==="users")return loadUsers();return loadChats();}
+ useEffect(()=>{load();},[page]);
+ const filteredUsers=useMemo(()=>users.filter(u=>[u.name,u.email,u.gameId,u.role].join(" ").toLowerCase().includes(search.toLowerCase())),[users,search]);
+ const filteredMessages=useMemo(()=>messages.filter(m=>[m.content,m.sender?.name,m.receiver?.name,m.sender?.email,m.receiver?.email].join(" ").toLowerCase().includes(search.toLowerCase())),[messages,search]);
+ async function openUser(u){setSelected(u);setDetails(null);setDetailTab("overview");try{setDetails(await apiRequest("/api/admin/users/"+u.id));}catch(e){setError(e.message);}}
+ async function editUser(u){const name=window.prompt("User name:",u.name);if(name===null)return;const email=window.prompt("User email:",u.email);if(email===null)return;try{await apiRequest("/api/admin/users/"+u.id,{method:"PATCH",body:JSON.stringify({name,email})});await loadUsers();}catch(e){window.alert(e.message);}}
+ async function deleteUser(u){if(!window.confirm("Permanently delete "+u.name+" and related account data?"))return;try{await apiRequest("/api/admin/users/"+u.id,{method:"DELETE"});setSelected(null);setDetails(null);await loadUsers();}catch(e){window.alert(e.message);}}
+ async function deleteMessage(m){if(!window.confirm("Permanently delete this chat message?"))return;try{await apiRequest("/api/admin/chats/"+m.id,{method:"DELETE"});if(selected)await openUser(selected);if(page==="chats")await loadChats();}catch(e){window.alert(e.message);}}
+ const nav=[["dashboard","▦","Dashboard"],["users","♙","Users"],["chats","▤","Chats"]];
+ return <div className="adm-layout">
+  <aside className="adm-sidebar"><div className="adm-brand"><span>Z</span><div><b>Zero Cross</b><small>Admin Control Center</small></div></div><label>MAIN MENU</label>{nav.map(([id,ico,label])=><button key={id} className={page===id?"active":""} onClick={()=>{setPage(id);setSearch("");setSelected(null);setDetails(null);}}><i>{ico}</i>{label}{id==="users"&&<em>{users.length}</em>}</button>)}<div className="adm-side-bottom"><span/> Secure admin session</div></aside>
+  <main className="adm-main"><header className="adm-top"><div><small>Zero Cross /</small> <b>{page==="dashboard"?"Dashboard":page==="users"?"User Management":"Chat Management"}</b></div><div className="adm-top-right"><span className="adm-status">● System active</span><button onClick={load} disabled={busy}>↻ Refresh</button><div className="adm-admin-avatar">A</div></div></header>
+   <section className="adm-content"><div className="adm-heading"><div><small>OVERVIEW</small><h1>{page==="dashboard"?"Welcome to your dashboard 👋":page==="users"?"User Management":"Chat Management"}</h1><p>{page==="dashboard"?"Here’s what’s happening with your platform today.":page==="users"?"Manage accounts, inspect user activity and control access.":"Review and manage conversations across your platform."}</p></div></div>
+   {error&&<div className="adm-error">{error}</div>}
+   {page==="dashboard"&&<>{stats&&<div className="adm-stats">{[["♙","Total Users",stats.users,"Registered accounts"],["▤","Chat Messages",stats.messages,"Messages exchanged"],["☎","Calls",stats.calls,"Call records"],["♧","Pending Requests",stats.pendingRequests,"Awaiting response"]].map(([ico,label,note,sub])=><article className="adm-stat" key={label}><span>{ico}</span><div><small>{label}</small><strong>{note}</strong><em>{sub}</em></div></article>)}</div>}
+    <div className="adm-dash-grid"><article className="adm-panel"><header><div><b>Recently Registered Users</b><small>Latest accounts on your platform</small></div><button onClick={()=>setPage("users")}>View all →</button></header>{recentUsers.map(u=><div className="adm-recent-user" key={u.id}><span className="adm-user-avatar">{initial(u.name)}</span><div><b>{u.name}</b><small>{u.email}</small></div><time>{dateText(u.createdAt)}</time><button onClick={()=>{setPage("users");openUser(u);}}>View</button></div>)}{!recentUsers.length&&<p className="adm-empty">No registered users yet.</p>}</article>
+    <article className="adm-panel"><header><div><b>Recent Chat Activity</b><small>Latest messages exchanged</small></div><button onClick={()=>setPage("chats")}>View all →</button></header>{recentMessages.map(m=><div className="adm-recent-message" key={m.id}><b>{m.sender?.name||"User"} <span>→</span> {m.receiver?.name||"User"}</b><p>{m.content}</p><small>{dateTime(m.createdAt)}</small></div>)}{!recentMessages.length&&<p className="adm-empty">No chat messages available.</p>}</article></div>
+    <article className="adm-panel adm-quick"><div><b>Quick Management</b><small>Jump directly to a section</small></div><button onClick={()=>setPage("users")}>♙ Manage Users</button><button onClick={()=>setPage("chats")}>▤ View Chats</button></article>
+   </>}
+   {page==="users"&&<article className="adm-panel adm-users-panel"><div className="adm-user-toolbar"><div><b>All Users</b><small>{users.length} registered accounts</small></div><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, email or Game ID..."/></div><div className="adm-table-scroll"><table className="adm-table"><thead><tr><th>USER</th><th>GAME ID</th><th>ROLE</th><th>MESSAGES</th><th>JOINED</th><th>ACTIONS</th></tr></thead><tbody>{filteredUsers.map(u=><tr key={u.id}><td><button className="adm-user-link" onClick={()=>openUser(u)}><span className="adm-user-avatar">{initial(u.name)}</span><span><b>{u.name}</b><small>{u.email}</small></span></button></td><td>{u.gameId||"—"}</td><td><span className={u.role==="ADMIN"?"adm-role-admin":"adm-role-user"}>{u.role||"USER"}</span></td><td>{(u._count?.sentMessages||0)+(u._count?.receivedMessages||0)}</td><td>{dateText(u.createdAt)}</td><td><button className="adm-action" onClick={()=>openUser(u)}>View</button><button className="adm-action" onClick={()=>editUser(u)}>Edit</button><button className="adm-action delete" onClick={()=>deleteUser(u)}>Delete</button></td></tr>)}</tbody></table>{!filteredUsers.length&&<p className="adm-empty">No matching users found.</p>}</div></article>}
+   {page==="chats"&&<article className="adm-panel"><div className="adm-user-toolbar"><div><b>All Conversations</b><small>{messages.length} latest messages</small></div><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search message, sender or receiver..."/></div>{filteredMessages.map(m=><div className="adm-chat-row" key={m.id}><div><b>{m.sender?.name} <span>→</span> {m.receiver?.name}</b><time>{dateTime(m.createdAt)}</time></div><p>{m.content}</p><small>{m.sender?.email} → {m.receiver?.email}</small><button className="adm-action delete" onClick={()=>deleteMessage(m)}>Delete message</button></div>)}{!filteredMessages.length&&<p className="adm-empty">No chat messages found.</p>}</article>}
+   {busy&&<div className="adm-loading">Loading data…</div>}
+   </section>
+  </main>
+  {selected&&<div className="adm-overlay" onClick={()=>{setSelected(null);setDetails(null);}}><aside className="adm-drawer" onClick={e=>e.stopPropagation()}><header><div><small>USER ACCOUNT</small><h2>User Details</h2></div><button onClick={()=>{setSelected(null);setDetails(null);}}>✕</button></header>{!details?<p className="adm-empty">Loading user details…</p>:<><div className="adm-profile"><span className="adm-user-avatar large">{initial(details.user.name)}</span><div><h3>{details.user.name}</h3><p>{details.user.email}</p><span className={details.user.role==="ADMIN"?"adm-role-admin":"adm-role-user"}>{details.user.role}</span></div></div><div className="adm-drawer-actions"><button onClick={()=>editUser(details.user)}>Edit User</button><button className="delete" onClick={()=>deleteUser(details.user)}>Delete User</button></div><nav className="adm-detail-tabs">{["overview","chats","activity"].map(t=><button className={detailTab===t?"active":""} key={t} onClick={()=>setDetailTab(t)}>{t}</button>)}</nav>{detailTab==="overview"&&<div className="adm-detail-grid">{[["Game ID",details.user.gameId],["Joined",dateText(details.user.createdAt)],["Last updated",dateText(details.user.updatedAt)],["Wins",details.user.stats?.wins??0],["Losses",details.user.stats?.losses??0],["Draws",details.user.stats?.draws??0],["Messages",details.chats?.length||0],["Calls",(details.user.outgoingCalls||[]).length+(details.user.incomingCalls||[]).length],["Friend requests",(details.user.sentFriendRequests||[]).length+(details.user.receivedFriendRequests||[]).length]].map(([k,v])=><div key={k}><small>{k}</small><b>{v??"—"}</b></div>)}</div>}{detailTab==="chats"&&(details.chats||[]).map(m=><article className="adm-drawer-chat" key={m.id}><div><b>{m.direction} · {m.peer?.name}</b><time>{dateTime(m.createdAt)}</time></div><p>{m.content}</p><button className="adm-action delete" onClick={()=>deleteMessage(m)}>Delete message</button></article>)}{detailTab==="activity"&&<div className="adm-activity">{[...(details.user.outgoingCalls||[]).map(c=>({...c,dir:"Outgoing",peer:c.receiver})),...(details.user.incomingCalls||[]).map(c=>({...c,dir:"Incoming",peer:c.caller}))].map(c=><p key={c.id}>{c.dir} {c.type} · {c.status} · {c.peer?.name} · {dateTime(c.startedAt)}</p>)}{[...(details.user.sentFriendRequests||[]),...(details.user.receivedFriendRequests||[])].map(x=><p key={x.id}>Friend request · {x.status} · {dateText(x.createdAt)}</p>)}</div>}</>}</aside></div>}
+ </div>;
 }
