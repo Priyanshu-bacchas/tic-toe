@@ -14,6 +14,7 @@ model User {
   petAnswerHash   String?
   gameId          String      @unique
   pinHash         String?
+  chatPublicKey   String? @db.Text
   profilePhoto    String?     @db.Text
   role            String      @default("USER")
   createdAt       DateTime    @default(now())
@@ -42,7 +43,7 @@ model Message {
   id         String   @id @default(cuid())
   senderId   String
   receiverId String
-  content    String   @db.VarChar(4000)
+  content    String   @db.Text
   readAt     DateTime?
   expiresAt  DateTime?
   createdAt  DateTime @default(now())
