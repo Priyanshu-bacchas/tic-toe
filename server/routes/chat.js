@@ -5,6 +5,11 @@ const modes=new Set(['off','after_seen','24h','7d']);
 const key=(a,b)=>[a,b].sort().join(':');
 const expiry=mode=>mode==='24h'?new Date(Date.now()+86400000):mode==='7d'?new Date(Date.now()+604800000):null;
 
+
+router.get('/keys/me',async(req,res)=>{const u=await prisma.user.findUnique({where:{id:req.user.id},select:{chatPublicKey:true}});res.json({publicKey:u?.chatPublicKey||null});});
+router.put('/keys/me',async(req,res)=>{const publicKey=String(req.body.publicKey||'');if(!publicKey||publicKey.length>2000)return res.status(400).json({message:'Invalid public key.'});await prisma.user.update({where:{id:req.user.id},data:{chatPublicKey:publicKey}});res.json({saved:true});});
+router.get('/keys/:userId',async(req,res)=>{const u=await prisma.user.findUnique({where:{id:req.params.userId},select:{chatPublicKey:true}});if(!u)return res.status(404).json({message:'User not found.'});res.json({publicKey:u.chatPublicKey||null});});
+
 router.get('/pin-status',async(req,res)=>{const u=await prisma.user.findUnique({where:{id:req.user.id},select:{pinHash:true}});res.json({hasPin:!!u?.pinHash});});
 router.put('/pin',async(req,res)=>{
  const pin=String(req.body.pin||''); if(!/^\d{4,8}$/.test(pin)) return res.status(400).json({message:'PIN must contain 4 to 8 digits.'});
@@ -50,7 +55,7 @@ router.get('/:userId',async(req,res)=>{
 });
 router.post('/message',async(req,res)=>{
  const receiverId=String(req.body.receiverId||''),content=String(req.body.content||'').trim();
- if(!content||content.length>4000)return res.status(400).json({message:'Message must be 1–4000 characters.'});
+ if(!content||content.length>12000||!content.startsWith('E2EE1:'))return res.status(400).json({message:'Encrypted message required. Open Chat again and retry.'});
  if(receiverId===req.user.id)return res.status(400).json({message:'Cannot message yourself.'});
  const receiver=await prisma.user.findUnique({where:{id:receiverId},select:{id:true}});
  if(!receiver)return res.status(404).json({message:'Player not found.'});
