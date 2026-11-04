@@ -14,7 +14,6 @@ model User {
   petAnswerHash   String?
   gameId          String      @unique
   pinHash         String?
-  chatPublicKey   String? @db.Text
   profilePhoto    String?     @db.Text
   role            String      @default("USER")
   createdAt       DateTime    @default(now())
