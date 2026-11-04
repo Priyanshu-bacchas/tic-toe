@@ -116,3 +116,34 @@
  .adm-table-scroll{overflow-x:auto!important}
  .adm-table{min-width:850px!important}
 }
+
+/* Dashboard: fit the complete overview in a standard desktop viewport. */
+.adm-dashboard-content{padding:20px 34px 18px!important}
+.adm-dashboard-content .adm-heading{margin-bottom:17px!important}
+.adm-dashboard-content .adm-heading h1{font-size:27px!important;margin:5px 0 4px!important}
+.adm-dashboard-content .adm-heading p{font-size:13px!important}
+.adm-dashboard-content .adm-stats{gap:16px!important;margin-bottom:17px!important}
+.adm-dashboard-content .adm-stat{min-height:76px!important;padding:13px 17px!important}
+.adm-dashboard-content .adm-stat>span{width:40px!important;height:40px!important;font-size:20px!important}
+.adm-dashboard-content .adm-stat strong{font-size:23px!important;margin:2px 0!important}
+.adm-dashboard-content .adm-dash-grid{gap:16px!important}
+.adm-dashboard-content .adm-dash-grid>.adm-panel{min-height:0!important}
+.adm-dashboard-content .adm-panel>header{min-height:62px!important;padding:13px 18px!important}
+.adm-dashboard-content .adm-recent-user{min-height:62px!important;padding:9px 16px!important;grid-template-columns:38px minmax(0,1fr) 88px 72px!important;gap:10px!important}
+.adm-dashboard-content .adm-recent-user>.adm-user-avatar{width:36px!important;height:36px!important}
+.adm-dashboard-content .adm-recent-user b{font-size:12px!important}
+.adm-dashboard-content .adm-recent-user small{font-size:10px!important;margin-top:2px!important}
+.adm-dashboard-content .adm-recent-user time{font-size:10px!important}
+.adm-dashboard-content .adm-recent-user button{width:72px!important;min-height:34px!important;padding:6px 9px!important;font-size:12px!important}
+.adm-dashboard-content .adm-recent-message{min-height:62px!important;padding:12px 18px!important}
+.adm-dashboard-content .adm-recent-message p{margin:5px 0!important;font-size:12px!important}
+.adm-dashboard-content .adm-quick{margin-top:15px!important;min-height:66px!important;padding:12px 18px!important}
+.adm-dashboard-content .adm-quick button{min-height:38px!important;padding:8px 12px!important}
+@media(max-width:1100px){
+ .adm-dashboard-content{padding:20px 20px 16px!important}
+ .adm-dashboard-content .adm-dash-grid{grid-template-columns:1fr!important}
+}
+@media(max-width:700px){
+ .adm-dashboard-content .adm-recent-user{grid-template-columns:36px minmax(0,1fr) 70px!important}
+ .adm-dashboard-content .adm-recent-user time{display:none!important}
+}
