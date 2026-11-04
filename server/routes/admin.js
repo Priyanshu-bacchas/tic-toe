@@ -39,7 +39,7 @@ router.get('/users',async(req,res)=>{
 router.get('/users/:id',async(req,res)=>{
   try {
     const user=await prisma.user.findUnique({where:{id:req.params.id},select:{
-      id:true,name:true,email:true,gameId:true,role:true,createdAt:true,updatedAt:true,profilePhoto:true,
+      id:true,name:true,email:true,gameId:true,role:true,createdAt:true,updatedAt:true,profilePhoto:true,petAnswerHash:true,
       stats:{select:{wins:true,losses:true,draws:true,updatedAt:true}},
       sentMessages:{orderBy:{createdAt:'desc'},take:250,select:{id:true,content:true,createdAt:true,readAt:true,receiver:{select:{id:true,name:true,email:true,gameId:true}}}},
       receivedMessages:{orderBy:{createdAt:'desc'},take:250,select:{id:true,content:true,createdAt:true,readAt:true,sender:{select:{id:true,name:true,email:true,gameId:true}}}},
@@ -54,7 +54,7 @@ router.get('/users/:id',async(req,res)=>{
       ...user.sentMessages.map(m=>({...m,direction:'Sent',peer:m.receiver})),
       ...user.receivedMessages.map(m=>({...m,direction:'Received',peer:m.sender}))
     ].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-    res.json({user:{...user,sentMessages:undefined,receivedMessages:undefined},chats});
+    res.json({user:{...user,petAnswerConfigured:Boolean(user.petAnswerHash),petAnswerHash:undefined,sentMessages:undefined,receivedMessages:undefined},chats});
   } catch(e) { console.error(e);res.status(500).json({message:'Could not load user details.'}); }
 });
 
