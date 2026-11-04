@@ -96,3 +96,23 @@
  .adm-quick>div{width:100%}
  .adm-quick button{flex:1;min-width:0}
 }
+
+
+/* Final users-table sizing: reserve a real column for the action controls. */
+.adm-table-scroll{overflow-x:hidden!important}
+.adm-table{width:100%!important;table-layout:fixed!important}
+.adm-table th:nth-child(1),.adm-table td:nth-child(1){width:22%!important}
+.adm-table th:nth-child(2),.adm-table td:nth-child(2){width:10%!important}
+.adm-table th:nth-child(3),.adm-table td:nth-child(3){width:10%!important}
+.adm-table th:nth-child(4),.adm-table td:nth-child(4){width:10%!important}
+.adm-table th:nth-child(5),.adm-table td:nth-child(5){width:9%!important}
+.adm-table th:nth-child(6),.adm-table td:nth-child(6){width:9%!important}
+.adm-table th:nth-child(7),.adm-table td:nth-child(7){width:12%!important}
+.adm-table th:nth-child(8),.adm-table td:nth-child(8){width:18%!important}
+.adm-table td:nth-child(8){white-space:nowrap!important;overflow:visible!important}
+.adm-icon-action{width:34px;height:34px;margin:0 5px 0 0;font-size:17px;vertical-align:middle}
+.adm-table td{height:64px;box-sizing:border-box}
+@media(max-width:900px){
+ .adm-table-scroll{overflow-x:auto!important}
+ .adm-table{min-width:850px!important}
+}
