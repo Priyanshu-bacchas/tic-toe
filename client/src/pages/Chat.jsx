@@ -3,6 +3,54 @@ import { useNavigate } from "react-router-dom";
 import "./Chat.css";
 import { apiRequest } from "../lib/api";
 
+const toBase64 = buffer => {
+ const bytes = new Uint8Array(buffer); let binary = "";
+ bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+ return btoa(binary);
+};
+const fromBase64 = value => Uint8Array.from(atob(value), ch => ch.charCodeAt(0));
+async function getChatIdentity() {
+ const privateRaw = localStorage.getItem("zero_chat_private_key_v1");
+ const publicRaw = localStorage.getItem("zero_chat_public_key_v1");
+ let privateKey, publicJwk;
+ if (privateRaw && publicRaw) {
+  privateKey = await crypto.subtle.importKey("jwk", JSON.parse(privateRaw), {name:"ECDH",namedCurve:"P-256"}, false, ["deriveKey"]);
+  publicJwk = JSON.parse(publicRaw);
+ } else {
+  const pair = await crypto.subtle.generateKey({name:"ECDH",namedCurve:"P-256"}, true, ["deriveKey"]);
+  privateKey = pair.privateKey;
+  const privateJwk = await crypto.subtle.exportKey("jwk", pair.privateKey);
+  publicJwk = await crypto.subtle.exportKey("jwk", pair.publicKey);
+  localStorage.setItem("zero_chat_private_key_v1", JSON.stringify(privateJwk));
+  localStorage.setItem("zero_chat_public_key_v1", JSON.stringify(publicJwk));
+ }
+ const saved = await apiRequest("/api/chat/keys/me");
+ const publicText = JSON.stringify(publicJwk);
+ if (saved.publicKey !== publicText) await apiRequest("/api/chat/keys/me", {method:"PUT",body:JSON.stringify({publicKey:publicText})});
+ return {privateKey, publicJwk};
+}
+async function deriveChatKey(privateKey, publicJwk) {
+ const peerKey = await crypto.subtle.importKey("jwk", publicJwk, {name:"ECDH",namedCurve:"P-256"}, false, []);
+ return crypto.subtle.deriveKey({name:"ECDH",public:peerKey},privateKey,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+}
+async function encryptChatMessage(plainText, publicJwk) {
+ const identity = await getChatIdentity();
+ const key = await deriveChatKey(identity.privateKey, publicJwk);
+ const iv = crypto.getRandomValues(new Uint8Array(12));
+ const cipher = await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(plainText));
+ return "E2EE1:" + toBase64(iv) + ":" + toBase64(cipher);
+}
+async function decryptChatMessage(payload, publicJwk) {
+ if (!payload.startsWith("E2EE1:")) return "[Old message — sent before encryption was enabled]";
+ const parts = payload.split(":");
+ if (parts.length !== 3) throw new Error("Invalid encrypted message");
+ const identity = await getChatIdentity();
+ const key = await deriveChatKey(identity.privateKey, publicJwk);
+ const plain = await crypto.subtle.decrypt({name:"AES-GCM",iv:fromBase64(parts[1])},key,fromBase64(parts[2]));
+ return new TextDecoder().decode(plain);
+}
+
+
 
 function Chat() {
 
@@ -882,11 +930,14 @@ function Chat() {
     const sendMessage = async () => {
         if (!message.trim() || !selected) return;
         try {
+            const peerKeyResponse = await apiRequest("/api/chat/keys/" + selected.id);
+            if (!peerKeyResponse.publicKey) throw new Error("Your friend must open Chat once to activate encryption.");
+            const encryptedContent = await encryptChatMessage(message.trim(), JSON.parse(peerKeyResponse.publicKey));
             const result = await apiRequest("/api/chat/message", {
                 method: "POST",
                 body: JSON.stringify({
                     receiverId: selected.id,
-                    content: message.trim()
+                    content: encryptedContent
                 })
             });
             const sent = result.message;
@@ -895,7 +946,7 @@ function Chat() {
                 [selected.id]: [
                     ...(previous[selected.id] || []),
                     {
-                        text: sent.content,
+                        text: message.trim(),
                         time: new Date(sent.createdAt).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit"
@@ -917,13 +968,24 @@ function Chat() {
             try {
                 const data = await apiRequest("/api/chat/" + selected.id);
                 if (!cancelled) {
-                    const freshMessages = (data.messages || []).map(item => ({
-                        text: item.content,
-                        time: new Date(item.createdAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit"
-                        }),
-                        senderId: item.senderId
+                    const [myIdentity, peerKeyResponse] = await Promise.all([
+                        getChatIdentity(),
+                        apiRequest("/api/chat/keys/" + selected.id)
+                    ]);
+                    const peerPublicJwk = peerKeyResponse.publicKey ? JSON.parse(peerKeyResponse.publicKey) : null;
+                    const freshMessages = await Promise.all((data.messages || []).map(async item => {
+                        let text;
+                        try {
+                            const senderPublicKey = item.senderId === user.id ? myIdentity.publicJwk : peerPublicJwk;
+                            text = senderPublicKey ? await decryptChatMessage(item.content, senderPublicKey) : "[Encryption key not available]";
+                        } catch {
+                            text = "[Unable to decrypt this message on this device]";
+                        }
+                        return {
+                            text,
+                            time: new Date(item.createdAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}),
+                            senderId: item.senderId
+                        };
                     }));
 
                     setMessages(previous => {
