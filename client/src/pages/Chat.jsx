@@ -1656,15 +1656,15 @@ function Chat() {
                                             <button type="button"
                                                 className={chatMode === "after_seen" ? "chat-setting-option active" : "chat-setting-option"}
                                                 onClick={() => updateChatMode("after_seen")} disabled={savingChatMode}>
-                                                <span>Seen hote hi gayab</span>
-                                                <small>Recipient chat kholkar message dekhte hi</small>
+                                                <span>After Seen</span>
+                                                <small>Message disappears when the recipient reads it.</small>
                                                 {chatMode === "after_seen" && <b>✓</b>}
                                             </button>
                                             <button type="button"
                                                 className={chatMode === "12h" ? "chat-setting-option active" : "chat-setting-option"}
                                                 onClick={() => updateChatMode("12h")} disabled={savingChatMode}>
-                                                <span>12 hours</span>
-                                                <small>Message bhejne ke 12 ghante baad</small>
+                                                <span>After 12 Hours</span>
+                                                <small>Message disappears 12 hours after it is sent.</small>
                                                 {chatMode === "12h" && <b>✓</b>}
                                             </button>
                                             <small className="chat-retention-note">All messages are permanently deleted from the database within 24 hours.</small>
