@@ -947,53 +947,6 @@ function Chat() {
         };
     }, [selected && selected.id]);
 
-    useEffect(() => {
-        if (!selected || !selected.id) return;
-        let cancelled = false;
-        const loadMessages = async () => {
-            try {
-                const data = await apiRequest("/api/chat/" + selected.id);
-                if (!cancelled) {
-                    const [myIdentity, peerKeyResponse] = await Promise.all([
-                        getChatIdentity(),
-                        apiRequest("/api/chat/keys/" + selected.id)
-                    ]);
-                    const peerPublicJwk = peerKeyResponse.publicKey ? JSON.parse(peerKeyResponse.publicKey) : null;
-                    const freshMessages = await Promise.all((data.messages || []).map(async item => {
-                        let text;
-                        try {
-                            const senderPublicKey = item.senderId === user.id ? myIdentity.publicJwk : peerPublicJwk;
-                            text = senderPublicKey ? await decryptChatMessage(item.content, senderPublicKey, item.senderId === user.id) : "[Encryption key not available]";
-                        } catch {
-                            text = "[Unable to decrypt this message on this device]";
-                        }
-                        return {
-                            text,
-                            time: new Date(item.createdAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}),
-                            senderId: item.senderId
-                        };
-                    }));
-
-                    setMessages(previous => {
-                        const currentMessages = previous[selected.id] || [];
-                        if (JSON.stringify(currentMessages) === JSON.stringify(freshMessages)) {
-                            return previous;
-                        }
-                        return { ...previous, [selected.id]: freshMessages };
-                    });
-                }
-            } catch (error) {
-                if (!cancelled) console.error("Message refresh failed:", error.message);
-            }
-        };
-        loadMessages();
-        const timer = setInterval(loadMessages, 3000);
-        return () => {
-            cancelled = true;
-            clearInterval(timer);
-        };
-    }, [selected && selected.id]);
-
     // RENDER    // RENDER
     // =========================================================
 
