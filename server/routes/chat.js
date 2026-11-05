@@ -76,7 +76,7 @@ router.get("/:userId/settings", requireFriend, async (req, res) => {
 });
 router.put("/:userId/settings", requireFriend, async (req, res) => {
   const mode = String(req.body.mode || "");
-  if (!modes.has(mode)) return res.status(400).json({ message: "Choose Seen hote hi gayab or 12 hours." });
+  if (!modes.has(mode)) return res.status(400).json({ message: "Choose After Seen or After 12 Hours." });
   const otherId = req.params.userId;
   const conversationKey = key(req.user.id, otherId);
   await prisma.chatPreference.upsert({ where: { conversationKey }, create: { conversationKey, mode }, update: { mode } });
