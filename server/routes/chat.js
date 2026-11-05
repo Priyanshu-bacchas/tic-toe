@@ -70,6 +70,28 @@ router.get("/contacts", async (req, res) => {
   res.json({ contacts: [...found.values()] });
 });
 
+// Return unread incoming-message totals, grouped by friend, for the chat list.
+router.get("/unread-counts", async (req, res, next) => {
+  try {
+    const now = new Date();
+    const cutoff = new Date(now.getTime() - DAY_MS);
+    const rows = await prisma.message.groupBy({
+      by: ["senderId"],
+      where: {
+        receiverId: req.user.id,
+        readAt: null,
+        createdAt: { gt: cutoff },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
+      },
+      _count: { _all: true }
+    });
+    const counts = Object.fromEntries(rows.map(row => [row.senderId, row._count._all]));
+    res.json({ counts });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/:userId/settings", requireFriend, async (req, res) => {
   const p = await prisma.chatPreference.findUnique({ where: { conversationKey: key(req.user.id, req.params.userId) } });
   res.json({ mode: p?.mode === "after_seen" ? "after_seen" : "12h" });
