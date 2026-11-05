@@ -16,7 +16,7 @@ function Home(){
     localStorage.removeItem("logged");
     localStorage.removeItem("auth_token");
     localStorage.removeItem("zero_user");
-    navigate("/");
+    window.location.replace("/");
   };
 
   const saveRecovery = async () => {
