@@ -1657,3 +1657,21 @@ cursor:pointer;
 .chat-setting-option b { position:absolute; top:12px; right:13px; color:#6258ed; }
 .chat-setting-option:disabled { opacity:.6; cursor:wait; }
 .chat-settings-menu .chat-retention-note { display:block; margin-top:12px; color:#7a5260; font-size:11px; line-height:1.4; }
+
+.chat-clear-option {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px 12px;
+  border: 1px solid #f2c7ce;
+  border-radius: 10px;
+  background: #fff4f5;
+  color: #c6283d;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.chat-clear-option:hover { background: #ffe7ea; }
+.chat-clear-option:disabled { opacity: .6; cursor: wait; }
+
