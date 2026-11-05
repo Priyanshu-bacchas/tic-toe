@@ -140,6 +140,32 @@ function Chat() {
 
 
     const [messages, setMessages] = useState({});
+    const [chatMode, setChatMode] = useState("12h");
+    const [showChatSettings, setShowChatSettings] = useState(false);
+    const [savingChatMode, setSavingChatMode] = useState(false);
+
+    useEffect(() => {
+        if (!selected?.id) return;
+        let cancelled = false;
+        setShowChatSettings(false);
+        apiRequest("/api/chat/" + selected.id + "/settings")
+            .then(data => { if (!cancelled) setChatMode(data.mode === "after_seen" ? "after_seen" : "12h"); })
+            .catch(error => console.error("Chat settings load failed:", error.message));
+        return () => { cancelled = true; };
+    }, [selected?.id]);
+
+    const updateChatMode = async (mode) => {
+        if (!selected?.id || savingChatMode) return;
+        setSavingChatMode(true);
+        try {
+            const data = await apiRequest("/api/chat/" + selected.id + "/settings", {
+                method: "PUT", body: JSON.stringify({ mode })
+            });
+            setChatMode(data.mode);
+            setShowChatSettings(false);
+        } catch (error) { alert(error.message); }
+        finally { setSavingChatMode(false); }
+    };
 
 
     // =========================================================
@@ -1618,6 +1644,32 @@ function Chat() {
                                     >
                                         🎥
                                     </button>
+
+                                    <button className="action-btn" title="Chat settings" aria-label="Chat settings"
+                                        onClick={() => setShowChatSettings(value => !value)}>
+                                        ⚙️
+                                    </button>
+                                    {showChatSettings && (
+                                        <div className="chat-settings-menu">
+                                            <h3>Disappearing messages</h3>
+                                            <p>Choose when new messages disappear</p>
+                                            <button type="button"
+                                                className={chatMode === "after_seen" ? "chat-setting-option active" : "chat-setting-option"}
+                                                onClick={() => updateChatMode("after_seen")} disabled={savingChatMode}>
+                                                <span>Seen hote hi gayab</span>
+                                                <small>Recipient chat kholkar message dekhte hi</small>
+                                                {chatMode === "after_seen" && <b>✓</b>}
+                                            </button>
+                                            <button type="button"
+                                                className={chatMode === "12h" ? "chat-setting-option active" : "chat-setting-option"}
+                                                onClick={() => updateChatMode("12h")} disabled={savingChatMode}>
+                                                <span>12 hours</span>
+                                                <small>Message bhejne ke 12 ghante baad</small>
+                                                {chatMode === "12h" && <b>✓</b>}
+                                            </button>
+                                            <small className="chat-retention-note">All messages are permanently deleted from the database within 24 hours.</small>
+                                        </div>
+                                    )}
 
 
                                     {/* FRIEND STATUS BUTTON */}
