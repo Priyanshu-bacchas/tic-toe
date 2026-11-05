@@ -1675,3 +1675,22 @@ cursor:pointer;
 .chat-clear-option:hover { background: #ffe7ea; }
 .chat-clear-option:disabled { opacity: .6; cursor: wait; }
 
+/* Unread message count in the friends list */
+.unread-message-badge {
+  margin-left: auto;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #18b957;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .12);
+  flex-shrink: 0;
+}
+
