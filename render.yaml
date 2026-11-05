@@ -1,11 +1,13 @@
 services:
+  # Backend: Express API + Socket.IO + Prisma
   - type: web
-    name: tic-toe
+    name: zero-cross-api
     runtime: node
     plan: free
     region: singapore
-    rootDir: .
-    buildCommand: npm run build
+    rootDir: server
+    buildCommand: npm install && npx prisma generate
+    preDeployCommand: npx prisma db push
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
@@ -18,4 +20,19 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CLIENT_URL
-        value: https://tic-toe-eynw.onrender.com
+        value: https://zero-cross-web.onrender.com
+
+  # Frontend: Vite React static site
+  - type: web
+    name: zero-cross-web
+    runtime: static
+    rootDir: client
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://zero-cross-api.onrender.com
