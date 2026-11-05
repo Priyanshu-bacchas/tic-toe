@@ -33,20 +33,42 @@ async function deriveChatKey(privateKey, publicJwk) {
  const peerKey = await crypto.subtle.importKey("jwk", publicJwk, {name:"ECDH",namedCurve:"P-256"}, false, []);
  return crypto.subtle.deriveKey({name:"ECDH",public:peerKey},privateKey,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
 }
-async function encryptChatMessage(plainText, publicJwk) {
+async function encryptChatMessage(plainText, recipientPublicJwk) {
  const identity = await getChatIdentity();
- const key = await deriveChatKey(identity.privateKey, publicJwk);
- const iv = crypto.getRandomValues(new Uint8Array(12));
- const cipher = await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(plainText));
- return "E2EE1:" + toBase64(iv) + ":" + toBase64(cipher);
+ const plaintext = new TextEncoder().encode(plainText);
+ const encryptFor = async publicJwk => {
+  const key = await deriveChatKey(identity.privateKey, publicJwk);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const cipher = await crypto.subtle.encrypt({name:"AES-GCM",iv},key,plaintext);
+  return [toBase64(iv), toBase64(cipher)];
+ };
+ // Keep one encrypted copy for the sender's own history and one for the recipient.
+ const [selfPayload, recipientPayload] = await Promise.all([
+  encryptFor(identity.publicJwk),
+  encryptFor(recipientPublicJwk)
+ ]);
+ return "E2EE2:" + [...selfPayload, ...recipientPayload].join(":");
 }
-async function decryptChatMessage(payload, publicJwk) {
- if (!payload.startsWith("E2EE1:")) return "[Old message — sent before encryption was enabled]";
- const parts = payload.split(":");
- if (parts.length !== 3) throw new Error("Invalid encrypted message");
+async function decryptChatMessage(payload, peerPublicJwk, isOwnMessage) {
  const identity = await getChatIdentity();
- const key = await deriveChatKey(identity.privateKey, publicJwk);
- const plain = await crypto.subtle.decrypt({name:"AES-GCM",iv:fromBase64(parts[1])},key,fromBase64(parts[2]));
+ const parts = payload.split(":");
+ let iv, cipher;
+ if (parts[0] === "E2EE2" && parts.length === 5) {
+  // Sender reads the self-copy; recipient reads the recipient-copy.
+  [, iv, cipher] = isOwnMessage ? parts.slice(0, 3) : parts.slice(0, 3);
+  if (!isOwnMessage) {
+   iv = parts[3];
+   cipher = parts[4];
+  }
+ } else if (parts[0] === "E2EE1" && parts.length === 3) {
+  if (isOwnMessage) return "[This older sent message cannot be decrypted. New messages are fixed.]";
+  iv = parts[1];
+  cipher = parts[2];
+ } else {
+  return "[Old message — sent before encryption was enabled]";
+ }
+ const key = await deriveChatKey(identity.privateKey, isOwnMessage ? identity.publicJwk : peerPublicJwk);
+ const plain = await crypto.subtle.decrypt({name:"AES-GCM",iv:fromBase64(iv)},key,fromBase64(cipher));
  return new TextDecoder().decode(plain);
 }
 
@@ -977,7 +999,7 @@ function Chat() {
                         let text;
                         try {
                             const senderPublicKey = item.senderId === user.id ? myIdentity.publicJwk : peerPublicJwk;
-                            text = senderPublicKey ? await decryptChatMessage(item.content, senderPublicKey) : "[Encryption key not available]";
+                            text = senderPublicKey ? await decryptChatMessage(item.content, senderPublicKey, item.senderId === user.id) : "[Encryption key not available]";
                         } catch {
                             text = "[Unable to decrypt this message on this device]";
                         }
