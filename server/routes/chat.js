@@ -68,7 +68,7 @@ router.get('/:userId',requireFriend,async(req,res)=>{
 });
 router.post('/message',async(req,res)=>{
  const receiverId=String(req.body.receiverId||''),content=String(req.body.content||'').trim();
- if(!content||content.length>12000||(!content.startsWith('E2EE1:')&&!content.startsWith('E2EE2:')))return res.status(400).json({message:'Encrypted message required. Open Chat again and retry.'});
+ if(!content||content.length>12000)return res.status(400).json({message:'Message must be between 1 and 12000 characters.'});
  if(!await isAcceptedFriend(req.user.id,receiverId))return res.status(403).json({message:'You can message only accepted friends.'});
  const p=await prisma.chatPreference.findUnique({where:{conversationKey:key(req.user.id,receiverId)}});
  const mode=p?.mode||'off';
