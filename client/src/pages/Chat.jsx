@@ -143,6 +143,7 @@ function Chat() {
     const [chatMode, setChatMode] = useState("12h");
     const [showChatSettings, setShowChatSettings] = useState(false);
     const [savingChatMode, setSavingChatMode] = useState(false);
+    const [clearingChat, setClearingChat] = useState(false);
 
     useEffect(() => {
         if (!selected?.id) return;
@@ -165,6 +166,23 @@ function Chat() {
             setShowChatSettings(false);
         } catch (error) { alert(error.message); }
         finally { setSavingChatMode(false); }
+    };
+
+    const clearChat = async () => {
+        if (!selected?.id || clearingChat) return;
+        const confirmed = window.confirm(`Clear all messages with ${selected.name || "this friend"}? This permanently deletes the conversation for both of you.`);
+        if (!confirmed) return;
+
+        setClearingChat(true);
+        try {
+            await apiRequest("/api/chat/" + selected.id + "/messages", { method: "DELETE" });
+            setMessages(previous => ({ ...previous, [selected.id]: [] }));
+            setShowChatSettings(false);
+        } catch (error) {
+            alert(error.message || "Could not clear this chat.");
+        } finally {
+            setClearingChat(false);
+        }
     };
 
 
@@ -1668,6 +1686,10 @@ function Chat() {
                                                 {chatMode === "12h" && <b>✓</b>}
                                             </button>
                                             <small className="chat-retention-note">All messages are permanently deleted from the database within 24 hours.</small>
+                                            <button type="button" className="chat-clear-option"
+                                                onClick={clearChat} disabled={clearingChat}>
+                                                {clearingChat ? "Clearing..." : "Clear Chat"}
+                                            </button>
                                         </div>
                                     )}
 
