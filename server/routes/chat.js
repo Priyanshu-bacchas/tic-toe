@@ -55,7 +55,7 @@ router.get('/:userId',async(req,res)=>{
 });
 router.post('/message',async(req,res)=>{
  const receiverId=String(req.body.receiverId||''),content=String(req.body.content||'').trim();
- if(!content||content.length>12000||!content.startsWith('E2EE1:'))return res.status(400).json({message:'Encrypted message required. Open Chat again and retry.'});
+ if(!content||content.length>12000||(!content.startsWith('E2EE1:')&&!content.startsWith('E2EE2:')))return res.status(400).json({message:'Encrypted message required. Open Chat again and retry.'});
  if(receiverId===req.user.id)return res.status(400).json({message:'Cannot message yourself.'});
  const receiver=await prisma.user.findUnique({where:{id:receiverId},select:{id:true}});
  if(!receiver)return res.status(404).json({message:'Player not found.'});
