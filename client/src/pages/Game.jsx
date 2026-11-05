@@ -848,6 +848,7 @@ try{
     body:JSON.stringify({pin:loginPin})
   });
   setLoginPin("");
+  sessionStorage.setItem("private_chat_unlocked", "yes");
   navigate("/chat");
 }catch(error){
   alert(error.message);
