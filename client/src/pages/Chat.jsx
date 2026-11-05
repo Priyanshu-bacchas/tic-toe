@@ -8,6 +8,14 @@ function Chat() {
 
     const navigate = useNavigate();
 
+    // Access is granted only for this visit after a successful PIN check.
+    // Leaving Chat (including browser Back) clears it, so Forward requires PIN again.
+    useEffect(() => {
+        return () => {
+            sessionStorage.removeItem("private_chat_unlocked");
+        };
+    }, []);
+
 
     // =========================================================
     // USER
