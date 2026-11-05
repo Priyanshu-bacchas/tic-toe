@@ -106,17 +106,20 @@ function Chat() {
     // =========================================================
 
     const [friends, setFriends] = useState([]);
+    const [unreadCounts, setUnreadCounts] = useState({});
     const [requests, setRequests] = useState([]);
     const [outgoingRequests, setOutgoingRequests] = useState([]);
     const [selected, setSelected] = useState(null);
 
     const refreshSocialData = async () => {
         try {
-            const [friendData, requestData] = await Promise.all([
+            const [friendData, requestData, unreadData] = await Promise.all([
                 apiRequest("/api/users/friends"),
-                apiRequest("/api/users/requests")
+                apiRequest("/api/users/requests"),
+                apiRequest("/api/chat/unread-counts")
             ]);
             setFriends(friendData.friends || []);
+            setUnreadCounts(unreadData.counts || {});
             setSelected(current => current ? ((friendData.friends || []).find(friend => friend.id === current.id) || null) : null);
             setRequests(requestData.incoming || []);
             setOutgoingRequests(requestData.outgoing || []);
@@ -1495,6 +1498,11 @@ function Chat() {
                                                     {f.profilePhoto ? <img src={f.profilePhoto} alt="" /> : "👤"}
                                                 </span>
                                                 <span className="friend-label">{f.name}</span>
+                                                {(unreadCounts[f.id] || 0) > 0 && (
+                                                    <span className="unread-message-badge" aria-label={`${unreadCounts[f.id]} unread messages`}>
+                                                        {unreadCounts[f.id] > 99 ? "99+" : unreadCounts[f.id]}
+                                                    </span>
+                                                )}
 
 
                                                 {
