@@ -4,6 +4,8 @@ const {Server}=require('socket.io');
 const {PrismaClient}=require('@prisma/client');
 const prisma=require('./prisma'),auth=require('./middleware/auth');
 const app=express(),server=http.createServer(app);
+// Render sits behind a trusted proxy; use the client IP for login throttling.
+app.set('trust proxy',1);
 const origins=(process.env.CLIENT_URL||'').split(',').map(x=>x.trim()).filter(Boolean);
 const allowedOrigins=[...origins,'capacitor://localhost','http://localhost','https://localhost'];
 const isAllowedOrigin=origin=>!origin||allowedOrigins.includes('*')||allowedOrigins.includes(origin)||/^https:\/\/[a-z0-9-]+(?:-[a-z0-9-]+)*\.vercel\.app$/i.test(origin);
