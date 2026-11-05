@@ -79,11 +79,39 @@ router.put("/:userId/settings", requireFriend, async (req, res) => {
   if (!modes.has(mode)) return res.status(400).json({ message: "Choose After Seen or After 12 Hours." });
   const otherId = req.params.userId;
   const conversationKey = key(req.user.id, otherId);
-  await prisma.chatPreference.upsert({ where: { conversationKey }, create: { conversationKey, mode }, update: { mode } });
+  // The existing Neon ChatPreference constraint allows "24h", not "12h".
+  // Keep the user-facing mode as 12h and store the compatible database value.
+  const storedMode = mode === "12h" ? "24h" : mode;
+  await prisma.chatPreference.upsert({
+    where: { conversationKey },
+    create: { conversationKey, mode: storedMode },
+    update: { mode: storedMode }
+  });
   const io = req.app.get("io");
   io.to(otherId).emit("chat:setting-changed", { mode, by: req.user.id });
   io.to(req.user.id).emit("chat:setting-changed", { mode, by: req.user.id });
   res.json({ mode, message: "Disappearing-message setting updated. It applies to new messages." });
+});
+
+router.delete("/:userId/messages", requireFriend, async (req, res, next) => {
+  try {
+    const otherId = req.params.userId;
+    const result = await prisma.message.deleteMany({
+      where: {
+        OR: [
+          { senderId: req.user.id, receiverId: otherId },
+          { senderId: otherId, receiverId: req.user.id }
+        ]
+      }
+    });
+
+    const io = req.app.get("io");
+    io.to(req.user.id).emit("chat:cleared", { with: otherId });
+    io.to(otherId).emit("chat:cleared", { with: req.user.id });
+    res.json({ cleared: true, deletedCount: result.count });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get("/:userId", requireFriend, async (req, res) => {
