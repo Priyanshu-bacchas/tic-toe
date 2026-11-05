@@ -22,6 +22,13 @@ function RequireAuth({ children, adminOnly = false }) {
   return children;
 }
 
+function RequirePrivateChat({ children }) {
+  if (sessionStorage.getItem("private_chat_unlocked") !== "yes") {
+    return <Navigate to="/game" replace />;
+  }
+  return children;
+}
+
 function AppRoutes() {
   useEffect(() => {
     const protectRestoredPage = () => {
@@ -38,7 +45,7 @@ function AppRoutes() {
       <Route path="/" element={<Auth />} />
       <Route path="/home" element={<RequireAuth><Home /></RequireAuth>} />
       <Route path="/game" element={<RequireAuth><Game /></RequireAuth>} />
-      <Route path="/chat" element={<RequireAuth><Chat /></RequireAuth>} />
+      <Route path="/chat" element={<RequireAuth><RequirePrivateChat><Chat /></RequirePrivateChat></RequireAuth>} />
       <Route path="/admin" element={<RequireAuth adminOnly><Admin /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
