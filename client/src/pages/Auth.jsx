@@ -27,7 +27,7 @@ function Auth() {
     localStorage.setItem("auth_token", token);
     localStorage.setItem("zero_user", JSON.stringify(user));
     localStorage.setItem("logged", "true");
-    navigate(String(user?.role || "").toUpperCase() === "ADMIN" ? "/admin" : "/home");
+    navigate(String(user?.role || "").toUpperCase() === "ADMIN" ? "/admin" : "/home", { replace: true });
   };
 
   const login = async () => {
