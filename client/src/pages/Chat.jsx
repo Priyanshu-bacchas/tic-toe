@@ -3,76 +3,6 @@ import { useNavigate } from "react-router-dom";
 import "./Chat.css";
 import { apiRequest } from "../lib/api";
 
-const toBase64 = buffer => {
- const bytes = new Uint8Array(buffer); let binary = "";
- bytes.forEach(byte => { binary += String.fromCharCode(byte); });
- return btoa(binary);
-};
-const fromBase64 = value => Uint8Array.from(atob(value), ch => ch.charCodeAt(0));
-async function getChatIdentity() {
- const privateRaw = localStorage.getItem("zero_chat_private_key_v1");
- const publicRaw = localStorage.getItem("zero_chat_public_key_v1");
- let privateKey, publicJwk;
- if (privateRaw && publicRaw) {
-  privateKey = await crypto.subtle.importKey("jwk", JSON.parse(privateRaw), {name:"ECDH",namedCurve:"P-256"}, false, ["deriveKey"]);
-  publicJwk = JSON.parse(publicRaw);
- } else {
-  const pair = await crypto.subtle.generateKey({name:"ECDH",namedCurve:"P-256"}, true, ["deriveKey"]);
-  privateKey = pair.privateKey;
-  const privateJwk = await crypto.subtle.exportKey("jwk", pair.privateKey);
-  publicJwk = await crypto.subtle.exportKey("jwk", pair.publicKey);
-  localStorage.setItem("zero_chat_private_key_v1", JSON.stringify(privateJwk));
-  localStorage.setItem("zero_chat_public_key_v1", JSON.stringify(publicJwk));
- }
- const saved = await apiRequest("/api/chat/keys/me");
- const publicText = JSON.stringify(publicJwk);
- if (saved.publicKey !== publicText) await apiRequest("/api/chat/keys/me", {method:"PUT",body:JSON.stringify({publicKey:publicText})});
- return {privateKey, publicJwk};
-}
-async function deriveChatKey(privateKey, publicJwk) {
- const peerKey = await crypto.subtle.importKey("jwk", publicJwk, {name:"ECDH",namedCurve:"P-256"}, false, []);
- return crypto.subtle.deriveKey({name:"ECDH",public:peerKey},privateKey,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
-}
-async function encryptChatMessage(plainText, recipientPublicJwk) {
- const identity = await getChatIdentity();
- const plaintext = new TextEncoder().encode(plainText);
- const encryptFor = async publicJwk => {
-  const key = await deriveChatKey(identity.privateKey, publicJwk);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const cipher = await crypto.subtle.encrypt({name:"AES-GCM",iv},key,plaintext);
-  return [toBase64(iv), toBase64(cipher)];
- };
- // Keep one encrypted copy for the sender's own history and one for the recipient.
- const [selfPayload, recipientPayload] = await Promise.all([
-  encryptFor(identity.publicJwk),
-  encryptFor(recipientPublicJwk)
- ]);
- return "E2EE2:" + [...selfPayload, ...recipientPayload].join(":");
-}
-async function decryptChatMessage(payload, peerPublicJwk, isOwnMessage) {
- const identity = await getChatIdentity();
- const parts = payload.split(":");
- let iv, cipher;
- if (parts[0] === "E2EE2" && parts.length === 5) {
-  // Sender reads the self-copy; recipient reads the recipient-copy.
-  [, iv, cipher] = isOwnMessage ? parts.slice(0, 3) : parts.slice(0, 3);
-  if (!isOwnMessage) {
-   iv = parts[3];
-   cipher = parts[4];
-  }
- } else if (parts[0] === "E2EE1" && parts.length === 3) {
-  if (isOwnMessage) return "[This older sent message cannot be decrypted. New messages are fixed.]";
-  iv = parts[1];
-  cipher = parts[2];
- } else {
-  return "[Old message — sent before encryption was enabled]";
- }
- const key = await deriveChatKey(identity.privateKey, isOwnMessage ? identity.publicJwk : peerPublicJwk);
- const plain = await crypto.subtle.decrypt({name:"AES-GCM",iv:fromBase64(iv)},key,fromBase64(cipher));
- return new TextDecoder().decode(plain);
-}
-
-
 
 function Chat() {
 
@@ -950,17 +880,12 @@ function Chat() {
     // =========================================================
 
     const sendMessage = async () => {
-        if (!message.trim() || !selected) return;
+        const content = message.trim();
+        if (!content || !selected) return;
         try {
-            const peerKeyResponse = await apiRequest("/api/chat/keys/" + selected.id);
-            if (!peerKeyResponse.publicKey) throw new Error("Your friend must open Chat once to activate encryption.");
-            const encryptedContent = await encryptChatMessage(message.trim(), JSON.parse(peerKeyResponse.publicKey));
             const result = await apiRequest("/api/chat/message", {
                 method: "POST",
-                body: JSON.stringify({
-                    receiverId: selected.id,
-                    content: encryptedContent
-                })
+                body: JSON.stringify({ receiverId: selected.id, content })
             });
             const sent = result.message;
             setMessages(previous => ({
@@ -968,7 +893,7 @@ function Chat() {
                 [selected.id]: [
                     ...(previous[selected.id] || []),
                     {
-                        text: message.trim(),
+                        text: content,
                         time: new Date(sent.createdAt).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit"
@@ -982,6 +907,45 @@ function Chat() {
             alert(error.message);
         }
     };
+
+    useEffect(() => {
+        if (!selected || !selected.id) return;
+        let cancelled = false;
+        const loadMessages = async () => {
+            try {
+                const data = await apiRequest("/api/chat/" + selected.id);
+                if (!cancelled) {
+                    const freshMessages = (data.messages || []).map(item => ({
+                        // Old encrypted messages cannot be converted back to plaintext.
+                        text: item.content.startsWith("E2EE1:") || item.content.startsWith("E2EE2:")
+                            ? "[Old encrypted message — unavailable after encryption was disabled]"
+                            : item.content,
+                        time: new Date(item.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit"
+                        }),
+                        senderId: item.senderId
+                    }));
+
+                    setMessages(previous => {
+                        const currentMessages = previous[selected.id] || [];
+                        if (JSON.stringify(currentMessages) === JSON.stringify(freshMessages)) {
+                            return previous;
+                        }
+                        return { ...previous, [selected.id]: freshMessages };
+                    });
+                }
+            } catch (error) {
+                if (!cancelled) console.error("Message refresh failed:", error.message);
+            }
+        };
+        loadMessages();
+        const timer = setInterval(loadMessages, 3000);
+        return () => {
+            cancelled = true;
+            clearInterval(timer);
+        };
+    }, [selected && selected.id]);
 
     useEffect(() => {
         if (!selected || !selected.id) return;
