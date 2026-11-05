@@ -3,6 +3,21 @@ const bcrypt=require('bcrypt'),jwt=require('jsonwebtoken'),prisma=require('../pr
 const safe=u=>({id:u.id,name:u.name,email:u.email,gameId:u.gameId,role:u.role||'USER',createdAt:u.createdAt});
 const token=u=>jwt.sign({id:u.id,email:u.email},process.env.JWT_SECRET,{expiresIn:'7d'});
 
+// Per-process login throttle: max 10 attempts per IP in a rolling 15-minute window.
+const loginAttempts=new Map();
+function loginRateLimit(req,res,next){
+ const now=Date.now(),ip=req.ip||req.socket.remoteAddress||'unknown',windowMs=15*60*1000,limit=10;
+ let entry=loginAttempts.get(ip);
+ if(!entry||entry.resetAt<=now){entry={count:0,resetAt:now+windowMs};loginAttempts.set(ip,entry);}
+ if(entry.count>=limit){
+  res.set('Retry-After',String(Math.ceil((entry.resetAt-now)/1000)));
+  return res.status(429).json({message:'Too many login attempts. Please try again in 15 minutes.'});
+ }
+ entry.count++;
+ if(loginAttempts.size>5000){for(const [address,item] of loginAttempts){if(item.resetAt<=now)loginAttempts.delete(address);}}
+ next();
+}
+
 router.post('/register',async(req,res)=>{
  try{
   const name=String(req.body.name||'').trim(),email=String(req.body.email||'').trim().toLowerCase(),password=String(req.body.password||''),petAnswer=String(req.body.petAnswer||'').trim().toLowerCase();
@@ -14,7 +29,7 @@ router.post('/register',async(req,res)=>{
   res.status(201).json({token:token(user),user:safe(user)});
  }catch(e){console.error(e);res.status(500).json({message:'Could not create account.'});}
 });
-router.post('/login',async(req,res)=>{
+router.post('/login',loginRateLimit,async(req,res)=>{
  try{
   const email=String(req.body.email||'').trim().toLowerCase(),password=String(req.body.password||''),user=await prisma.user.findUnique({where:{email}});
   if(!user||!await bcrypt.compare(password,user.passwordHash))return res.status(401).json({message:'Invalid email or password.'});
