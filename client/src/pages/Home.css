@@ -249,14 +249,39 @@ transform:translateY(-3px);
 .recovery-panel .main-btn{margin-top:0;font-size:13px}
 .recovery-message{margin-top:10px;color:#4c3d91}
 
-/* Match the authentication card dimensions on the welcome screen */
+/* Compact, vertically centered welcome card for mobile */
+.home-page {
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 16px;
+  align-items: center;
+  justify-content: center;
+}
 .home-card {
-  height: min(720px, calc(100dvh - 32px));
-  min-height: 560px;
+  width: min(100%, 380px);
+  height: auto;
+  min-height: 0;
+  max-height: calc(100svh - 32px);
+  padding: 24px 22px;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   overflow-y: auto;
   scrollbar-width: none;
 }
 .home-card::-webkit-scrollbar { display: none; }
+.home-card .logo h1 { font-size: 40px; line-height: 1.05; }
+.home-card .logo h2 { font-size: 27px; line-height: 1.1; margin-bottom: 22px; }
+.home-card .welcome-box { padding: 18px; margin-bottom: 16px; }
+.home-card .welcome-box h2 { margin: 8px 0 12px; }
+.home-card button { height: 48px; margin-top: 10px; }
+.home-card .recovery-btn { min-height: 46px; height: auto; padding: 10px 14px; }
+
+@media (max-height: 650px) {
+  .home-page { padding: 10px; }
+  .home-card { max-height: calc(100svh - 20px); padding: 18px; }
+  .home-card .logo h2 { margin-bottom: 14px; }
+  .home-card .welcome-box { padding: 14px; margin-bottom: 10px; }
+  .home-card button { margin-top: 8px; }
+}
 
