@@ -467,3 +467,15 @@ letter-spacing:5px;
 .forgot-title{color:#764ba2;font-size:21px;letter-spacing:1px;margin-bottom:-8px}
 .forgot-help{color:#64748b;font-size:14px;line-height:1.5;margin-top:-8px}
 .main-btn:disabled{opacity:.65;cursor:not-allowed;transform:none}
+
+/* Keep Login, Sign Up and Welcome cards at one consistent size */
+.auth-card {
+  height: min(720px, calc(100dvh - 32px));
+  min-height: 560px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.auth-card::-webkit-scrollbar { display: none; }
+
