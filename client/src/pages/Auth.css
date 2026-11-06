@@ -479,7 +479,9 @@ letter-spacing:5px;
 }
 .auth-card::-webkit-scrollbar { display: none; }
 
-/* Use the extra card space so Login and Sign Up controls sit a little lower */
-.auth-card > .tabs {
+/* Keep the logo, tabs and input fields in their original positions.
+   Use the lower empty space only for the Login and Forgot Password actions. */
+.login-form .main-btn {
   margin-top: 28px;
 }
+
