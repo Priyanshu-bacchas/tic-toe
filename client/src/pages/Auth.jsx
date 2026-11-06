@@ -89,7 +89,7 @@ function Auth() {
         )}
 
         {mode === "login" && (
-          <div className="form" autoComplete="off">
+          <div className="form login-form" autoComplete="off">
             <input type="email" name="username" placeholder="Email address" autoComplete="username" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} />
             <div className="password-box">
               <input type={showLogin ? "text" : "password"} name="password" placeholder=" " autoComplete="current-password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} />
