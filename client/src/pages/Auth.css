@@ -468,19 +468,19 @@ letter-spacing:5px;
 .forgot-help{color:#64748b;font-size:14px;line-height:1.5;margin-top:-8px}
 .main-btn:disabled{opacity:.65;cursor:not-allowed;transform:none}
 
-/* Compact, vertically centered mobile authentication card */
+/* Same compact card dimensions on Login, Sign Up and Forgot Password */
 .auth-page {
   min-height: 100vh;
   min-height: 100svh;
-  padding: 16px;
+  padding: 10px 16px;
   align-items: center;
   justify-content: center;
 }
 .auth-card {
-  width: min(100%, 380px);
-  height: auto;
+  width: min(380px, calc(100vw - 32px));
+  height: min(445px, calc(100svh - 20px));
   min-height: 0;
-  max-height: calc(100svh - 32px);
+  max-height: calc(100svh - 20px);
   padding: 24px 22px;
   display: flex;
   flex-direction: column;
@@ -500,12 +500,12 @@ letter-spacing:5px;
 .login-form .main-btn { margin-top: 22px; }
 .auth-card .link { margin-top: 0; }
 
-@media (max-height: 650px) {
-  .auth-page { padding: 10px; }
-  .auth-card { max-height: calc(100svh - 20px); padding: 18px; }
-  .auth-card .logo h2 { margin-bottom: 14px; }
-  .auth-card .tabs { margin-bottom: 12px; }
-  .auth-card .form { gap: 10px; }
-  .login-form .main-btn { margin-top: 12px; }
-}
+/* Keep the longer Sign Up form usable inside the same card size */
+.auth-card .form:not(.login-form) { gap: 10px; }
+.auth-card .form:not(.login-form) > input { height: 44px; }
+.auth-card .form:not(.login-form) .password-box input { height: 46px; }
+.auth-card .form:not(.login-form) .main-btn { height: 46px; flex-shrink: 0; }
 
+@media (max-height: 500px) {
+  .auth-card { height: calc(100svh - 20px); }
+}
