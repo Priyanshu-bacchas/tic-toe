@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { apiRequest } from "../lib/api";
@@ -22,6 +22,37 @@ function Auth() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(() => Boolean(localStorage.getItem("auth_token")));
+
+  useEffect(() => {
+    let active = true;
+    const restoreSession = async () => {
+      const token = localStorage.getItem("auth_token");
+      const cachedUser = localStorage.getItem("zero_user");
+
+      if (!token || !cachedUser) {
+        if (active) setCheckingSession(false);
+        return;
+      }
+
+      try {
+        const result = await apiRequest("/api/auth/me");
+        if (!active) return;
+        localStorage.setItem("zero_user", JSON.stringify(result.user));
+        localStorage.setItem("logged", "true");
+        navigate(String(result.user?.role || "").toUpperCase() === "ADMIN" ? "/admin" : "/home", { replace: true });
+      } catch {
+        if (!active) return;
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("zero_user");
+        localStorage.removeItem("logged");
+        setCheckingSession(false);
+      }
+    };
+
+    restoreSession();
+    return () => { active = false; };
+  }, [navigate]);
 
   const completeAuth = ({ token, user }) => {
     localStorage.setItem("auth_token", token);
@@ -76,6 +107,10 @@ function Auth() {
     } catch (error) { alert(error.message); }
     finally { setLoading(false); }
   };
+
+  if (checkingSession) {
+    return <div className="auth-page"><div className="auth-card"><div className="logo"><h1>ZERO</h1><h2>CROSS</h2></div><p>Restoring your session...</p></div></div>;
+  }
 
   return (
     <div className="auth-page">
