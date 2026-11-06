@@ -479,3 +479,7 @@ letter-spacing:5px;
 }
 .auth-card::-webkit-scrollbar { display: none; }
 
+/* Use the extra card space so Login and Sign Up controls sit a little lower */
+.auth-card > .tabs {
+  margin-top: 28px;
+}
