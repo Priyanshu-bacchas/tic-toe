@@ -90,9 +90,9 @@ function Auth() {
 
         {mode === "login" && (
           <div className="form" autoComplete="off">
-            <input type="email" name="zero-cross-login-email" placeholder="Email address" autoComplete="off" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} />
+            <input type="email" name="username" placeholder="Email address" autoComplete="username" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} />
             <div className="password-box">
-              <input type={showLogin ? "text" : "password"} name="zero-cross-login-password" placeholder=" " autoComplete="new-password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} />
+              <input type={showLogin ? "text" : "password"} name="password" placeholder=" " autoComplete="current-password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} />
               <label>Password</label>
               <span onClick={() => setShowLogin(!showLogin)}>{showLogin ? <FaEye /> : <FaEyeSlash />}</span>
             </div>
