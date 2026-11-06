@@ -468,44 +468,41 @@ letter-spacing:5px;
 .forgot-help{color:#64748b;font-size:14px;line-height:1.5;margin-top:-8px}
 .main-btn:disabled{opacity:.65;cursor:not-allowed;transform:none}
 
-/* Same compact card dimensions on Login, Sign Up and Forgot Password */
+/* Restore content-sized auth card: short forms center, long signup stays scrollable */
 .auth-page {
   min-height: 100vh;
   min-height: 100svh;
-  padding: 10px 16px;
+  padding: 16px;
   align-items: center;
   justify-content: center;
 }
 .auth-card {
+  box-sizing: border-box;
   width: min(380px, calc(100vw - 32px));
-  height: min(445px, calc(100svh - 20px));
+  height: auto;
   min-height: 0;
-  max-height: calc(100svh - 20px);
+  max-height: calc(100svh - 32px);
+  margin-block: auto;
   padding: 24px 22px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   overflow-y: auto;
   scrollbar-width: none;
 }
 .auth-card::-webkit-scrollbar { display: none; }
 .auth-card .logo h1 { font-size: 40px; line-height: 1.05; }
 .auth-card .logo h2 { font-size: 27px; line-height: 1.1; margin-bottom: 22px; }
-.auth-card .tabs { gap: 10px; margin-bottom: 18px; }
-.auth-card .tabs button { height: 44px; }
-.auth-card .form { gap: 14px; }
-.auth-card .form > input { height: 48px; border-radius: 15px; }
+.auth-card .tabs { gap: 10px; margin-bottom: 18px; flex-shrink: 0; }
+.auth-card .tabs button { height: 44px; flex-shrink: 0; }
+.auth-card .form { gap: 14px; flex-shrink: 0; }
+.auth-card .form > input { height: 48px; border-radius: 15px; flex-shrink: 0; }
+.auth-card .password-box { flex-shrink: 0; }
 .auth-card .password-box input { height: 50px; border-radius: 15px; }
-.auth-card .main-btn { height: 48px; }
+.auth-card .main-btn { height: 48px; flex-shrink: 0; }
 .login-form .main-btn { margin-top: 22px; }
-.auth-card .link { margin-top: 0; }
-
-/* Keep the longer Sign Up form usable inside the same card size */
+.auth-card .link { margin-top: 0; flex-shrink: 0; }
 .auth-card .form:not(.login-form) { gap: 10px; }
 .auth-card .form:not(.login-form) > input { height: 44px; }
 .auth-card .form:not(.login-form) .password-box input { height: 46px; }
-.auth-card .form:not(.login-form) .main-btn { height: 46px; flex-shrink: 0; }
-
-@media (max-height: 500px) {
-  .auth-card { height: calc(100svh - 20px); }
-}
+.auth-card .form:not(.login-form) .main-btn { height: 46px; }
