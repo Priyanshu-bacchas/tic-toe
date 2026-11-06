@@ -248,3 +248,15 @@ transform:translateY(-3px);
 .recovery-panel input:focus{border-color:#667eea}
 .recovery-panel .main-btn{margin-top:0;font-size:13px}
 .recovery-message{margin-top:10px;color:#4c3d91}
+
+/* Match the authentication card dimensions on the welcome screen */
+.home-card {
+  height: min(720px, calc(100dvh - 32px));
+  min-height: 560px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.home-card::-webkit-scrollbar { display: none; }
+
