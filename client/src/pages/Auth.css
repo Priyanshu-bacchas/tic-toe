@@ -468,20 +468,44 @@ letter-spacing:5px;
 .forgot-help{color:#64748b;font-size:14px;line-height:1.5;margin-top:-8px}
 .main-btn:disabled{opacity:.65;cursor:not-allowed;transform:none}
 
-/* Keep Login, Sign Up and Welcome cards at one consistent size */
+/* Compact, vertically centered mobile authentication card */
+.auth-page {
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 16px;
+  align-items: center;
+  justify-content: center;
+}
 .auth-card {
-  height: min(720px, calc(100dvh - 32px));
-  min-height: 560px;
+  width: min(100%, 380px);
+  height: auto;
+  min-height: 0;
+  max-height: calc(100svh - 32px);
+  padding: 24px 22px;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   overflow-y: auto;
   scrollbar-width: none;
 }
 .auth-card::-webkit-scrollbar { display: none; }
+.auth-card .logo h1 { font-size: 40px; line-height: 1.05; }
+.auth-card .logo h2 { font-size: 27px; line-height: 1.1; margin-bottom: 22px; }
+.auth-card .tabs { gap: 10px; margin-bottom: 18px; }
+.auth-card .tabs button { height: 44px; }
+.auth-card .form { gap: 14px; }
+.auth-card .form > input { height: 48px; border-radius: 15px; }
+.auth-card .password-box input { height: 50px; border-radius: 15px; }
+.auth-card .main-btn { height: 48px; }
+.login-form .main-btn { margin-top: 22px; }
+.auth-card .link { margin-top: 0; }
 
-/* Keep the logo, tabs and input fields in their original positions.
-   Use the lower empty space only for the Login and Forgot Password actions. */
-.login-form .main-btn {
-  margin-top: 82px;
+@media (max-height: 650px) {
+  .auth-page { padding: 10px; }
+  .auth-card { max-height: calc(100svh - 20px); padding: 18px; }
+  .auth-card .logo h2 { margin-bottom: 14px; }
+  .auth-card .tabs { margin-bottom: 12px; }
+  .auth-card .form { gap: 10px; }
+  .login-form .main-btn { margin-top: 12px; }
 }
 
