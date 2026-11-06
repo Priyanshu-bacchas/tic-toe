@@ -3,7 +3,7 @@ const bcrypt=require('bcrypt');
 const jwt=require('jsonwebtoken');
 const prisma=require('../prisma');
 const safeUser=u=>({id:u.id,name:u.name,email:u.email,gameId:u.gameId,role:u.role||'USER',createdAt:u.createdAt});
-const makeToken=u=>jwt.sign({id:u.id,email:u.email},process.env.JWT_SECRET,{expiresIn:'7d'});
+const makeToken=u=>jwt.sign({id:u.id,email:u.email},process.env.JWT_SECRET,{expiresIn:'365d'});
 router.post('/register',async(req,res)=>{
  try{
   const name=String(req.body.name||'').trim(),email=String(req.body.email||'').trim().toLowerCase(),password=String(req.body.password||'');
