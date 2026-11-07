@@ -21,12 +21,30 @@ function Chat() {
     // USER
     // =========================================================
 
-    const user =
-        JSON.parse(localStorage.getItem("zero_user")) ||
-        {
-            name: "Guest",
-            gameId: "#000000"
-        };
+    const [user, setUser] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem("zero_user")) || {
+                name: "Guest",
+                gameId: "#000000"
+            };
+        } catch {
+            return { name: "Guest", gameId: "#000000" };
+        }
+    });
+
+    // Always use the account identity attached to the active auth token.
+    // Cached localStorage user data can be stale after switching accounts.
+    useEffect(() => {
+        let cancelled = false;
+        apiRequest("/api/auth/me")
+            .then(result => {
+                if (cancelled || !result.user) return;
+                setUser(result.user);
+                localStorage.setItem("zero_user", JSON.stringify(result.user));
+            })
+            .catch(error => console.error("Could not verify current chat user:", error.message));
+        return () => { cancelled = true; };
+    }, []);
 
 
     // =========================================================
@@ -475,9 +493,9 @@ function Chat() {
 
             type: "mine",
 
-            id: user.gameId,
+            id: user.id,
 
-            name: "My Status"
+            name: user.name || "My Status"
 
         });
 
