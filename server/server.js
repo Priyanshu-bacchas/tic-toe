@@ -11,7 +11,7 @@ const allowedOrigins=[...origins,'capacitor://localhost','http://localhost','htt
 const isAllowedOrigin=origin=>!origin||allowedOrigins.includes('*')||allowedOrigins.includes(origin)||/^https:\/\/[a-z0-9-]+(?:-[a-z0-9-]+)*\.vercel\.app$/i.test(origin);
 const corsOrigin=(origin,callback)=>callback(null,isAllowedOrigin(origin));
 app.use(cors({origin:corsOrigin,credentials:false}));
-app.use(express.json({limit:'12mb'}));
+app.use(express.json({limit:'40mb'}));
 const io=new Server(server,{cors:{origin:corsOrigin,methods:['GET','POST','PUT']}});
 app.set('io',io);
 io.use((socket,next)=>{try{const token=socket.handshake.auth?.token;if(!token)throw Error();socket.user=jwt.verify(token,process.env.JWT_SECRET);next();}catch{next(new Error('Unauthorized'));}});
