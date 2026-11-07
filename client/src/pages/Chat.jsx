@@ -389,23 +389,54 @@ function Chat() {
         };
 
         files.forEach(file => {
-            if ((!file.type.startsWith("image/") && !file.type.startsWith("video/")) || file.size > 6 * 1024 * 1024) {
-                if (file.size > 8 * 1024 * 1024) alert(file.name + " is larger than 6 MB and was skipped.");
+            const isImage = file.type.startsWith("image/");
+            const isVideo = file.type.startsWith("video/");
+            if ((!isImage && !isVideo) || file.size > 25 * 1024 * 1024) {
+                alert(file.name + " was skipped. Status media must be an image or a video under 25 MB.");
                 finishOne();
                 return;
             }
-            const reader = new FileReader();
-            reader.onload = () => {
-                newStatuses.push({
-                    id: Date.now() + "_" + Math.random(),
-                    url: String(reader.result || ""),
-                    type: file.type,
-                    time: new Date().toISOString()
-                });
-                finishOne();
+
+            const readFile = () => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    newStatuses.push({
+                        id: Date.now() + "_" + Math.random(),
+                        url: String(reader.result || ""),
+                        type: file.type,
+                        time: new Date().toISOString()
+                    });
+                    finishOne();
+                };
+                reader.onerror = () => {
+                    alert("Could not read " + file.name + ".");
+                    finishOne();
+                };
+                reader.readAsDataURL(file);
             };
-            reader.onerror = finishOne;
-            reader.readAsDataURL(file);
+
+            if (isVideo) {
+                const objectUrl = URL.createObjectURL(file);
+                const video = document.createElement("video");
+                video.preload = "metadata";
+                video.onloadedmetadata = () => {
+                    URL.revokeObjectURL(objectUrl);
+                    if (!Number.isFinite(video.duration) || video.duration > 60) {
+                        alert(file.name + " was skipped. Status videos can be maximum 1 minute long.");
+                        finishOne();
+                        return;
+                    }
+                    readFile();
+                };
+                video.onerror = () => {
+                    URL.revokeObjectURL(objectUrl);
+                    alert("Could not read video duration for " + file.name + ".");
+                    finishOne();
+                };
+                video.src = objectUrl;
+            } else {
+                readFile();
+            }
         });
 
         e.target.value = "";
