@@ -1586,6 +1586,14 @@ function Chat() {
 
                             <div className="chat-top">
 
+                                <button
+                                    type="button"
+                                    className="chat-mobile-back"
+                                    onClick={() => setSelected(null)}
+                                    aria-label="Back to friends"
+                                >
+                                    ‹
+                                </button>
 
                                 <div className="chat-user">
 
