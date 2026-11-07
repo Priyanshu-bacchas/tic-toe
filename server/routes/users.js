@@ -168,8 +168,13 @@ router.get('/:userId/status', async (req, res, next) => {
 router.post('/status', async (req, res, next) => {
   try {
     const { mediaUrl, type } = req.body;
-    if (typeof mediaUrl !== 'string' || !/^data:(image\/(png|jpeg|webp|gif)|video\/(mp4|webm));base64,/.test(mediaUrl) || mediaUrl.length > 9000000) {
-      return res.status(400).json({ message: 'Status must be a supported image/video under 6 MB.' });
+    const match = typeof mediaUrl === 'string' && mediaUrl.match(/^data:(image\/(png|jpeg|webp|gif)|video\/(mp4|webm));base64,([A-Za-z0-9+/=]+)$/);
+    const maxBytes = 25 * 1024 * 1024;
+    if (!match || Buffer.from(match[3], 'base64').length > maxBytes) {
+      return res.status(400).json({ message: 'Status must be a supported image/video under 25 MB.' });
+    }
+    if (match[1].startsWith('video/') && type !== match[1]) {
+      return res.status(400).json({ message: 'Status video type does not match its media.' });
     }
     const row = await prisma.status.create({
       data: { userId: req.user.id, mediaUrl, type: String(type || '').slice(0, 100), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) }
