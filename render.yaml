@@ -6,7 +6,7 @@ services:
     plan: free
     region: singapore
     rootDir: server
-    buildCommand: npm install && npx prisma db push && npx prisma generate
+    buildCommand: npm install && npx prisma generate
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
